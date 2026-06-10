@@ -1,0 +1,261 @@
+import { Test, TestingModule } from '@nestjs/testing';
+import { UnauthorizedException, BadRequestException } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
+import * as bcrypt from 'bcrypt';
+
+import { AuthService } from './auth.service';
+import { PrismaService } from '../../database/prisma.service';
+import { RegisterDto } from './dto/register.dto';
+
+describe('AuthService', () => {
+  let service: AuthService;
+  let prismaService: PrismaService;
+  let jwtService: JwtService;
+
+  const mockPrismaService = {
+    user: {
+      create: jest.fn(),
+      findUnique: jest.fn(),
+      update: jest.fn(),
+      findFirst: jest.fn(),
+    },
+    account: {
+      create: jest.fn(),
+    },
+  };
+
+  const mockJwtService = {
+    sign: jest.fn(),
+  };
+
+  const mockConfigService = {
+    get: jest.fn((key: string) => {
+      if (key === 'JWT_REFRESH_EXPIRES_IN') return '7d';
+      return 'test-secret';
+    }),
+  };
+
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        AuthService,
+        {
+          provide: PrismaService,
+          useValue: mockPrismaService,
+        },
+        {
+          provide: JwtService,
+          useValue: mockJwtService,
+        },
+        {
+          provide: ConfigService,
+          useValue: mockConfigService,
+        },
+      ],
+    }).compile();
+
+    service = module.get<AuthService>(AuthService);
+    prismaService = module.get<PrismaService>(PrismaService);
+    jwtService = module.get<JwtService>(JwtService);
+
+    jest.clearAllMocks();
+  });
+
+  it('should be defined', () => {
+    expect(service).toBeDefined();
+  });
+
+  describe('register', () => {
+    it('should register a new user successfully', async () => {
+      const registerDto: RegisterDto = {
+        email: 'test@example.com',
+        password: 'password123',
+        firstName: 'John',
+        lastName: 'Doe',
+      };
+
+      mockPrismaService.user.create.mockResolvedValue({
+        id: '1',
+        email: 'test@example.com',
+        firstName: 'John',
+        lastName: 'Doe',
+      });
+
+      mockPrismaService.account.create.mockResolvedValue({});
+
+      const result = await service.register(registerDto);
+
+      expect(result).toHaveProperty('user');
+      expect(result).toHaveProperty('message');
+      expect(result.message).toBe('Registration successful');
+      expect(mockPrismaService.user.create).toHaveBeenCalled();
+      expect(mockPrismaService.account.create).toHaveBeenCalled();
+    });
+  });
+
+  describe('validateUser', () => {
+    it('should validate user with correct credentials', async () => {
+      const mockUser = {
+        id: '1',
+        email: 'test@example.com',
+        password: await bcrypt.hash('password123', 12),
+        isActive: true,
+        isBanned: false,
+      };
+
+      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+
+      const result = await service.validateUser('test@example.com', 'password123');
+
+      expect(result).toBeDefined();
+      expect(result.email).toBe('test@example.com');
+      expect(result.password).toBeUndefined();
+    });
+
+    it('should return null for invalid email', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue(null);
+
+      const result = await service.validateUser('wrong@example.com', 'password123');
+
+      expect(result).toBeNull();
+    });
+
+    it('should return null for invalid password', async () => {
+      const mockUser = {
+        id: '1',
+        email: 'test@example.com',
+        password: await bcrypt.hash('password123', 12),
+        isActive: true,
+        isBanned: false,
+      };
+
+      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+
+      const result = await service.validateUser('test@example.com', 'wrongpassword');
+
+      expect(result).toBeNull();
+    });
+
+    it('should throw UnauthorizedException for inactive user', async () => {
+      const mockUser = {
+        id: '1',
+        email: 'test@example.com',
+        password: await bcrypt.hash('password123', 12),
+        isActive: false,
+        isBanned: false,
+      };
+
+      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+
+      await expect(
+        service.validateUser('test@example.com', 'password123')
+      ).rejects.toThrow(UnauthorizedException);
+    });
+
+    it('should throw UnauthorizedException for banned user', async () => {
+      const mockUser = {
+        id: '1',
+        email: 'test@example.com',
+        password: await bcrypt.hash('password123', 12),
+        isActive: true,
+        isBanned: true,
+      };
+
+      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+
+      await expect(
+        service.validateUser('test@example.com', 'password123')
+      ).rejects.toThrow(UnauthorizedException);
+    });
+  });
+
+  describe('login', () => {
+    it('should return access and refresh tokens', async () => {
+      const mockUser = {
+        id: '1',
+        email: 'test@example.com',
+        firstName: 'John',
+        lastName: 'Doe',
+      };
+
+      mockJwtService.sign.mockReturnValue('mock-token');
+      mockPrismaService.user.update.mockResolvedValue({});
+
+      const result = await service.login(mockUser);
+
+      expect(result).toHaveProperty('accessToken');
+      expect(result).toHaveProperty('refreshToken');
+      expect(result).toHaveProperty('user');
+      expect(mockJwtService.sign).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('logout', () => {
+    it('should return logout message', async () => {
+      const mockUser = { id: '1', email: 'test@example.com' };
+
+      const result = await service.logout(mockUser, 'mock-token');
+
+      expect(result).toHaveProperty('message');
+      expect(result.message).toBe('Logout successful');
+    });
+  });
+
+  describe('forgotPassword', () => {
+    it('should return message for existing user', async () => {
+      const mockUser = {
+        id: '1',
+        email: 'test@example.com',
+      };
+
+      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+      mockPrismaService.user.update.mockResolvedValue({});
+
+      const result = await service.forgotPassword({ email: 'test@example.com' });
+
+      expect(result).toHaveProperty('message');
+      expect(result.message).toContain('reset link');
+    });
+
+    it('should return message for non-existing user (security)', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue(null);
+
+      const result = await service.forgotPassword({ email: 'nonexistent@example.com' });
+
+      expect(result).toHaveProperty('message');
+      expect(result.message).toContain('reset link');
+    });
+  });
+
+  describe('resetPassword', () => {
+    it('should reset password with valid token', async () => {
+      const mockUser = {
+        id: '1',
+        email: 'test@example.com',
+      };
+
+      mockPrismaService.user.findFirst.mockResolvedValue(mockUser);
+      mockPrismaService.user.update.mockResolvedValue({});
+
+      const result = await service.resetPassword({
+        token: 'valid-token',
+        newPassword: 'newpassword123',
+      });
+
+      expect(result).toHaveProperty('message');
+      expect(result.message).toBe('Password reset successfully');
+    });
+
+    it('should throw BadRequestException for invalid token', async () => {
+      mockPrismaService.user.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.resetPassword({
+          token: 'invalid-token',
+          newPassword: 'newpassword123',
+        })
+      ).rejects.toThrow(BadRequestException);
+    });
+  });
+});

@@ -1,0 +1,126 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: sorte-agora-db
+    environment:
+      POSTGRES_USER: sorteagora
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-sorteagora123}
+      POSTGRES_DB: sorte_agora
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - sorte-agora-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sorteagora"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: sorte-agora-redis
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - sorte-agora-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: sorte-agora-backend
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      DATABASE_URL: postgresql://sorteagora:${DB_PASSWORD:-sorteagora123}@postgres:5432/sorte_agora?schema=public
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-key-change-in-production}
+      JWT_EXPIRES_IN: 15m
+      JWT_REFRESH_EXPIRES_IN: 7d
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-your-32-byte-hex-key-change-in-production}
+      CORS_ORIGIN: http://localhost:8080
+      JAEGER_ENDPOINT: http://jaeger:4318/v1/traces
+    ports:
+      - "3001:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - sorte-agora-network
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: sorte-agora-frontend
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:3001
+      NEXT_PUBLIC_WS_URL: ws://localhost:3001
+    ports:
+      - "8080:3000"
+    depends_on:
+      - backend
+    networks:
+      - sorte-agora-network
+
+  # Observabilidade
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: sorte-agora-jaeger
+    ports:
+      - "16686:16686"
+      - "4318:4318"
+    networks:
+      - sorte-agora-network
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: sorte-agora-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    networks:
+      - sorte-agora-network
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: sorte-agora-grafana
+    ports:
+      - "3003:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+    networks:
+      - sorte-agora-network
+    depends_on:
+      - prometheus
+
+volumes:
+  postgres_data:
+  redis_data:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  sorte-agora-network:
+    driver: bridge
