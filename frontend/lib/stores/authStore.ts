@@ -36,8 +36,13 @@ export const useAuthStore = create<AuthState>()(
       isAuthenticated: false,
       login: async (email: string, password: string) => {
         const data = await authApi.login({ email, password });
+        if (data.mfaRequired || !data.accessToken) {
+          throw new Error('MFA_REQUIRED');
+        }
         localStorage.setItem('accessToken', data.accessToken);
-        localStorage.setItem('refreshToken', data.refreshToken);
+        if (data.refreshToken) {
+          localStorage.setItem('refreshToken', data.refreshToken);
+        }
         set({
           user: data.user,
           token: data.accessToken,

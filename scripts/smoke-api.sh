@@ -28,9 +28,20 @@ curl -sf "$BASE/users/me/export" -H "Authorization: Bearer $TOKEN" | grep -q exp
 
 echo "== pix webhook idempotent path =="
 # Cria depósito PENDING se auto-confirm off; com auto-confirm on, webhook em id inexistente = 404
-# Smoke apenas garante endpoint público responde (não 401)
+WH_HEADERS=(-H 'Content-Type: application/json')
+if [ -n "${PIX_WEBHOOK_SECRET:-}" ]; then
+  WH_HEADERS+=(-H "x-webhook-secret: ${PIX_WEBHOOK_SECRET}")
+fi
+# fallback: lê do .env do Compose se existir
+if [ -z "${PIX_WEBHOOK_SECRET:-}" ] && [ -f "$(dirname "$0")/../.env" ]; then
+  # shellcheck disable=SC1091
+  PIX_WEBHOOK_SECRET=$(grep -E '^PIX_WEBHOOK_SECRET=' "$(dirname "$0")/../.env" | cut -d= -f2- | tr -d '"' || true)
+  if [ -n "${PIX_WEBHOOK_SECRET:-}" ]; then
+    WH_HEADERS+=(-H "x-webhook-secret: ${PIX_WEBHOOK_SECRET}")
+  fi
+fi
 WH=$(curl -s -o /tmp/wh.json -w '%{http_code}' -X POST "$BASE/webhooks/pix" \
-  -H 'Content-Type: application/json' \
+  "${WH_HEADERS[@]}" \
   -d '{"externalId":"pix_smoke_missing","status":"PAID"}')
 case "$WH" in
   200|400|404) ;;
@@ -39,7 +50,7 @@ esac
 
 echo "== pix payout webhook shape =="
 WHP=$(curl -s -o /tmp/whp.json -w '%{http_code}' -X POST "$BASE/webhooks/pix" \
-  -H 'Content-Type: application/json' \
+  "${WH_HEADERS[@]}" \
   -d '{"externalId":"payout_smoke_missing","status":"PAID","kind":"PAYOUT"}')
 case "$WHP" in
   200|400|404) ;;

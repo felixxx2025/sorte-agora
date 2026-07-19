@@ -60,16 +60,23 @@ function VipContent() {
                 <CardTitle className="text-gray-300">Missões</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                {!missions || missions.length === 0 ? (
-                  <p className="text-gray-400">Nenhuma missão ativa.</p>
-                ) : (
-                  missions.map((mission: any, idx: number) => (
+                {(() => {
+                  const list = Array.isArray(missions)
+                    ? missions
+                    : [
+                        ...((missions as any)?.daily || []),
+                        ...((missions as any)?.weekly || []),
+                      ];
+                  if (!list.length) {
+                    return <p className="text-gray-400">Nenhuma missão ativa.</p>;
+                  }
+                  return list.map((mission: any, idx: number) => (
                     <div key={mission.id || idx} className="border-b border-white/5 pb-2">
                       <p className="font-medium">{mission.title || mission.name}</p>
                       <p className="text-sm text-gray-400">{mission.description}</p>
                     </div>
-                  ))
-                )}
+                  ));
+                })()}
               </CardContent>
             </Card>
           </div>

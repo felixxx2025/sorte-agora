@@ -2,6 +2,7 @@ import { ValidationPipe } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import { NestExpressApplication } from "@nestjs/platform-express";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
+import { webcrypto } from "crypto";
 import helmet from "helmet";
 import { join } from "path";
 import { AppModule } from "./app.module";
@@ -10,6 +11,11 @@ import { LoggingInterceptor } from "./common/interceptors/logging.interceptor";
 import { TransformInterceptor } from "./common/interceptors/transform.interceptor";
 import { MailService } from "./common/services/mail.service";
 import "./tracing";
+
+// Nest Schedule / Node < 19: garantir crypto global
+if (!(globalThis as any).crypto) {
+  (globalThis as any).crypto = webcrypto;
+}
 
 function secretsAreWeak(): boolean {
   const jwt = process.env.JWT_SECRET || "";

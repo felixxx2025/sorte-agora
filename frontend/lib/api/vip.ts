@@ -41,7 +41,7 @@ export const vipApi = {
     return response.data;
   },
 
-  async getMissions(): Promise<Missions> {
+  async getMissions(): Promise<Mission[] | Missions> {
     const response = await apiClient.get('/vip/missions');
     return response.data;
   },

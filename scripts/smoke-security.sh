@@ -34,12 +34,19 @@ CODE=$(curl -s -o /dev/null -w '%{http_code}' "$BASE/admin/dashboard" \
 MFA_SHAPE=$(echo "$LOGIN" | python3 -c "import sys,json; d=json.load(sys.stdin); x=d.get('data',d); print('mfa' if x.get('mfaRequired') else ('ok' if x.get('accessToken') else 'bad'))")
 [ "$MFA_SHAPE" = "ok" ] || [ "$MFA_SHAPE" = "mfa" ] && pass "login shape MFA/tokens ($MFA_SHAPE)" || fail "login shape inválido"
 
-# Webhook público existe (não 401)
+# Webhook público existe (não 401 JWT; 401 pode ser secret ausente)
+WH_HEADERS=(-H 'Content-Type: application/json')
+if [ -f "$(dirname "$0")/../.env" ]; then
+  PIX_WEBHOOK_SECRET=$(grep -E '^PIX_WEBHOOK_SECRET=' "$(dirname "$0")/../.env" | cut -d= -f2- | tr -d '"' || true)
+  if [ -n "${PIX_WEBHOOK_SECRET:-}" ]; then
+    WH_HEADERS+=(-H "x-webhook-secret: ${PIX_WEBHOOK_SECRET}")
+  fi
+fi
 CODE=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$BASE/webhooks/pix" \
-  -H 'Content-Type: application/json' -d '{}')
+  "${WH_HEADERS[@]}" -d '{}')
 case "$CODE" in
   400|404|200) pass "webhook pix público ($CODE)" ;;
-  401) fail "webhook pix bloqueado por JWT" ;;
+  401) fail "webhook pix bloqueado por JWT/secret" ;;
   *) fail "webhook pix status inesperado $CODE" ;;
 esac
 
