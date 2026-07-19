@@ -143,3 +143,23 @@ export function useDeleteBonus() {
     },
   });
 }
+
+export function useAssignBonus() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, userId }: { id: string; userId: string }) =>
+      adminApi.assignBonus(id, userId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'bonuses'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
+    },
+  });
+}
+
+export function useSettleAffiliateCommissions() {
+  return useMutation({
+    mutationFn: (affiliateId?: string) =>
+      adminApi.settleAffiliateCommissions(affiliateId),
+  });
+}

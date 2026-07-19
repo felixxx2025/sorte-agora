@@ -60,4 +60,6 @@ export {
   useCreateBonus,
   useUpdateBonus,
   useDeleteBonus,
+  useAssignBonus,
+  useSettleAffiliateCommissions,
 } from './useAdmin';

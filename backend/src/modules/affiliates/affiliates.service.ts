@@ -140,6 +140,42 @@ export class AffiliatesService {
     });
   }
 
+  /** Liquida comissões PENDING → PAID (todas ou de um afiliado). */
+  async settlePendingCommissions(affiliateId?: string) {
+    const result = await this.prisma.affiliateCommission.updateMany({
+      where: {
+        status: "PENDING",
+        ...(affiliateId ? { affiliateId } : {}),
+      },
+      data: {
+        status: "PAID",
+        paidAt: new Date(),
+      },
+    });
+    return { settled: result.count, affiliateId: affiliateId || null };
+  }
+
+  async markCommissionPaid(commissionId: string) {
+    const commission = await this.prisma.affiliateCommission.findUnique({
+      where: { id: commissionId },
+    });
+    if (!commission) {
+      throw new NotFoundException("Commission not found");
+    }
+    if (commission.status === "PAID") {
+      return { ...commission, idempotent: true };
+    }
+    if (commission.status !== "PENDING") {
+      throw new BadRequestException(
+        `Cannot pay commission with status ${commission.status}`,
+      );
+    }
+    return this.prisma.affiliateCommission.update({
+      where: { id: commissionId },
+      data: { status: "PAID", paidAt: new Date() },
+    });
+  }
+
   private generateTrackingCode(): string {
     return crypto.randomBytes(4).toString("hex").toUpperCase();
   }

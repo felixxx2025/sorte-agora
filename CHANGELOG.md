@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.6.0-faseD3] — 2026-07-19
+
+### Added
+- Gates `ENABLE_SPORTS` / `ENABLE_AFFILIATES` nos controllers
+- Admin: `POST /bonuses/:id/assign` e liquidação de comissões afiliado
+- Página `not-found` no frontend; status `PROCESSING` tipado
+
+### Changed
+- Swagger versão 1.5 + tags webhooks/lgpd
+- Client Axios unwrap de `message`/`details` em erros
+- README / GO_LIVE / RUNBOOK alinhados a STATUS (~94%)
+
+### Status
+Maturidade ~94/100 — padronização e estabilidade; PSP contrato real permanece pós-staging.
+
 ## [1.5.0-faseD2] — 2026-07-19
 
 ### Added

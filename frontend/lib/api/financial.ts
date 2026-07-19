@@ -33,7 +33,7 @@ export interface Transaction {
   amount: number;
   method?: string;
   pixKey?: string;
-  status: 'PENDING' | 'COMPLETED' | 'FAILED' | 'CANCELLED';
+  status: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED' | 'CANCELLED';
   processedAt?: string;
   createdAt: string;
 }

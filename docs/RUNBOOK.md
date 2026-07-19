@@ -1,4 +1,4 @@
-# RUNBOOK — SORTE AGORA (Fase C)
+# RUNBOOK — SORTE AGORA (pós D3)
 
 Operação de staging/incidente. Não substitui playbooks de provedor licenciado.
 

@@ -8,6 +8,7 @@ import {
   ServiceUnavailableException,
   UseGuards,
 } from "@nestjs/common";
+import { ApiTags } from "@nestjs/swagger";
 import { CurrentUser } from "../../common/decorators/user.decorator";
 import { Public } from "../../common/decorators/public.decorator";
 import { JwtAuthGuard } from "../../common/guards/auth.guard";
@@ -15,6 +16,7 @@ import { FeatureFlagsService } from "../../common/services/feature-flags.service
 import { CasinoService } from "./casino.service";
 import { LaunchGameDto } from "./dto/launch-game.dto";
 
+@ApiTags("casino")
 @Controller("casino")
 @UseGuards(JwtAuthGuard)
 export class CasinoController {

@@ -12,6 +12,9 @@ describe("AffiliatesService", () => {
     affiliateCommission: {
       create: jest.fn(),
       findMany: jest.fn(),
+      findUnique: jest.fn(),
+      update: jest.fn(),
+      updateMany: jest.fn(),
     },
   };
 
@@ -88,6 +91,33 @@ describe("AffiliatesService", () => {
         source: "BET",
       });
       expect(result).toBeNull();
+    });
+  });
+
+  describe("settlePendingCommissions", () => {
+    it("marks PENDING as PAID", async () => {
+      mockPrisma.affiliateCommission.updateMany.mockResolvedValue({ count: 3 });
+      const result = await service.settlePendingCommissions("a1");
+      expect(result).toEqual({ settled: 3, affiliateId: "a1" });
+      expect(mockPrisma.affiliateCommission.updateMany).toHaveBeenCalledWith({
+        where: { status: "PENDING", affiliateId: "a1" },
+        data: expect.objectContaining({ status: "PAID" }),
+      });
+    });
+  });
+
+  describe("markCommissionPaid", () => {
+    it("pays a PENDING commission", async () => {
+      mockPrisma.affiliateCommission.findUnique.mockResolvedValue({
+        id: "c1",
+        status: "PENDING",
+      });
+      mockPrisma.affiliateCommission.update.mockResolvedValue({
+        id: "c1",
+        status: "PAID",
+      });
+      const result = await service.markCommissionPaid("c1");
+      expect(result.status).toBe("PAID");
     });
   });
 });

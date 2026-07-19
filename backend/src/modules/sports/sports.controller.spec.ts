@@ -1,11 +1,11 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { JwtAuthGuard } from "../../common/guards/auth.guard";
+import { FeatureFlagsService } from "../../common/services/feature-flags.service";
 import { SportsController } from "./sports.controller";
 import { SportsService } from "./sports.service";
 
 describe("SportsController", () => {
   let controller: SportsController;
-  let sportsService: SportsService;
 
   const mockSportsService = {
     getEvents: jest.fn(),
@@ -13,6 +13,8 @@ describe("SportsController", () => {
     placeBet: jest.fn(),
     getBets: jest.fn(),
   };
+
+  const mockFlags = { sports: true };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -22,6 +24,10 @@ describe("SportsController", () => {
           provide: SportsService,
           useValue: mockSportsService,
         },
+        {
+          provide: FeatureFlagsService,
+          useValue: mockFlags,
+        },
       ],
     })
       .overrideGuard(JwtAuthGuard)
@@ -29,9 +35,8 @@ describe("SportsController", () => {
       .compile();
 
     controller = module.get<SportsController>(SportsController);
-    sportsService = module.get<SportsService>(SportsService);
-
     jest.clearAllMocks();
+    mockFlags.sports = true;
   });
 
   it("should be defined", () => {
@@ -114,6 +119,13 @@ describe("SportsController", () => {
 
       expect(result).toHaveLength(2);
       expect(mockSportsService.getBets).toHaveBeenCalledWith("user1");
+    });
+  });
+
+  describe("feature flag", () => {
+    it("throws when sports disabled", () => {
+      mockFlags.sports = false;
+      expect(() => controller.getEvents()).toThrow(/Sports is disabled/);
     });
   });
 });

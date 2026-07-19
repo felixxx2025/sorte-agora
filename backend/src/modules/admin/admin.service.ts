@@ -1,5 +1,10 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from "@nestjs/common";
 import { PrismaService } from "../../database/prisma.service";
+import { AffiliatesService } from "../affiliates/affiliates.service";
 import { FinancialService } from "../financial/financial.service";
 import { SportsService } from "../sports/sports.service";
 import { BanUserDto } from "./dto/ban-user.dto";
@@ -11,6 +16,7 @@ export class AdminService {
     private prisma: PrismaService,
     private sportsService: SportsService,
     private financialService: FinancialService,
+    private affiliatesService: AffiliatesService,
   ) {}
 
   async getDashboard() {
@@ -214,5 +220,66 @@ export class AdminService {
     return this.prisma.bonus.delete({
       where: { id: bonusId },
     });
+  }
+
+  /** Credita bonusBalance do usuário com o valor fixo do catálogo. */
+  async assignBonus(bonusId: string, userId: string) {
+    const bonus = await this.prisma.bonus.findUnique({ where: { id: bonusId } });
+    if (!bonus) {
+      throw new NotFoundException("Bonus not found");
+    }
+    if (!bonus.isActive) {
+      throw new BadRequestException("Bonus is inactive");
+    }
+    if (bonus.validTo && bonus.validTo < new Date()) {
+      throw new BadRequestException("Bonus expired");
+    }
+
+    const account = await this.prisma.account.findUnique({ where: { userId } });
+    if (!account) {
+      throw new NotFoundException("Account not found");
+    }
+
+    const amount = Number(bonus.amount);
+    if (amount <= 0) {
+      throw new BadRequestException("Bonus amount must be positive");
+    }
+
+    const result = await this.prisma.$transaction(async (tx) => {
+      const transaction = await tx.transaction.create({
+        data: {
+          userId,
+          accountId: account.id,
+          type: "BONUS",
+          amount,
+          method: "BONUS",
+          status: "COMPLETED",
+          providerRef: bonus.id,
+          processedAt: new Date(),
+        },
+      });
+      const updated = await tx.account.update({
+        where: { id: account.id },
+        data: { bonusBalance: { increment: amount } },
+      });
+      return { transaction, updated };
+    });
+
+    return {
+      message: "Bonus assigned",
+      bonusId: bonus.id,
+      userId,
+      amount,
+      bonusBalance: result.updated.bonusBalance,
+      transactionId: result.transaction.id,
+    };
+  }
+
+  async settleAffiliateCommissions(affiliateId?: string) {
+    return this.affiliatesService.settlePendingCommissions(affiliateId);
+  }
+
+  async payAffiliateCommission(commissionId: string) {
+    return this.affiliatesService.markCommissionPaid(commissionId);
   }
 }

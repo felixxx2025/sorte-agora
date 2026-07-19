@@ -1,6 +1,6 @@
 # GO-LIVE checklist — SORTE AGORA
 
-**Versão alvo:** pós Fase D2 (~93/100 maturidade staging)  
+**Versão alvo:** pós Fase D3 (~94/100 maturidade staging)  
 **Não é** certificação de provedor licenciado / PIX produção bancária.
 
 ## Validado em ambiente local (Fase D2)
@@ -26,7 +26,7 @@
 - [ ] SMTP real
 - [ ] CORS_ORIGIN = domínio público HTTPS
 - [ ] Backup cron + restore testado 1× no ambiente
-- [ ] Monitoramento (Sentry/Grafana) com alertas
+- [ ] Monitoramento (Sentry/Grafana) com alertas — backend já captura 500s se `SENTRY_DSN` setado
 
 ## Não bloqueante (pós-staging)
 

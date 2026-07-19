@@ -4,24 +4,40 @@
 
 | Campo | Valor |
 |-------|-------|
-| **Versão** | 1.3.0-faseC |
-| **Fase atual** | **Fase C — Fechamento / staging ready** |
-| **Maturidade** | ~88/100 (ver `GO_LIVE.md`) |
+| **Versão** | 1.6.0-faseD3 |
+| **Fase atual** | **D3 — Padronizar & estabilizar** (fechada) |
+| **Maturidade** | ~94/100 (ver `GO_LIVE.md` + `STATUS.md`) |
 | **Domínio** | Apostas (cassino + esportes) — **não** rifas |
 | **Última atualização** | 19 de julho de 2026 |
 
-> Documentos antigos que afirmam “92/100 pronto para produção” estão **desatualizados**. A fonte de verdade é [`STATUS.md`](./STATUS.md).
+> Fonte de verdade: [`STATUS.md`](./STATUS.md).
+
+## O que a Fase D3 entregou
+
+- Gates `ENABLE_SPORTS` / `ENABLE_AFFILIATES`; assign de bônus; settle de comissões
+- Swagger 1.5, not-found FE, erros Axios padronizados
+- Testes: ver `docs/test-results/fase-D3.md`
+
+## O que a Fase D2 entregou
+
+- HttpPixProvider, payout PROCESSING/webhook, odds HTTP opcional, casino live endurecido
+- Testes: `docs/test-results/fase-D2.md`
+
+## O que a Fase D1 entregou
+
+- MFA no login, secrets Compose, ThrottlerGuard, age gate, páginas legais, Next 14.2.35
+- Testes: `docs/test-results/fase-D1.md`
 
 ## O que a Fase C entregou
 
-- E2E **15/15**, Vitest FE, security smoke, CI e2e, feature flags, RUNBOOK
-- Testes: **94** unit BE + **5** FE — `docs/test-results/fase-C.md`
+- E2E, Vitest FE, security smoke, CI e2e, feature flags, RUNBOOK
+- Testes: `docs/test-results/fase-C.md`
 
 ## O que a Fase B entregou
 
 - PIX provider + webhook, limites, casino live adapter, settlement cron
 - KYC storage, LGPD self-service, termos/privacidade, wallet QR
-- Testes: **89** unit + smoke + E2E **7/7** — `docs/test-results/fase-B.md`
+- Testes: `docs/test-results/fase-B.md`
 
 ## O que a Fase A entregou
 

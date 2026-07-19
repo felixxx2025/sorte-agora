@@ -1,8 +1,8 @@
 # STATUS — SORTE AGORA
 
-**Atualizado:** 19 de julho de 2026 (Fase D2 — PIX/providers)  
-**Maturidade geral estimada:** ~93/100  
-**Estado:** adapters PIX HTTP + payout; casino live exige BASE_URL; odds feed opcional
+**Atualizado:** 19 de julho de 2026 (Fase D3 — Padronizar & estabilizar)  
+**Maturidade geral estimada:** ~94/100  
+**Estado:** flags money-path coerentes; bônus atribuível; comissões liquidáveis; docs alinhadas
 
 ## Fases
 
@@ -15,25 +15,25 @@
 | B — Implementação (PIX/provider/LGPD) | ✅ |
 | C — Testes & go-live staging | ✅ |
 | D1 — Correção & Endurecimento | ✅ |
-| **D2 — PIX/providers reais** | ✅ |
-| D3 — Padronizar & estabilizar | ⏳ |
+| D2 — PIX/providers reais | ✅ |
+| **D3 — Padronizar & estabilizar** | ✅ |
 
-## Score por módulo (pós Fase D2)
+## Score por módulo (pós Fase D3)
 
 | Módulo | Score | Notas |
 |--------|------:|-------|
 | Auth / MFA / reset | 93 | D1 |
-| KYC | 82 | Storage local/MinIO |
-| Financeiro | 93 | HttpPix + payout PROCESSING/webhook |
-| Cassino | 86 | live exige BASE_URL; ENABLE_CASINO |
-| Sports + settlement | 90 | Odds HTTP opcional |
+| KYC | 82 | — |
+| Financeiro | 93 | D2 + PROCESSING tipado no FE |
+| Cassino | 88 | ENABLE_CASINO |
+| Sports + settlement | 92 | ENABLE_SPORTS + odds HTTP |
 | VIP | 80 | — |
-| Afiliados | 78 | — |
-| Admin UI | 88 | Approve via FinancialService |
+| Afiliados | 88 | settle PENDING→PAID |
+| Admin UI | 92 | assign bônus + liquidar comissões |
 | LGPD / Trust | 86 | — |
-| Infra / CI | 90 | Compose com env PIX/CASINO/SPORTS |
-| Testes | 92 | 102 unit BE + 5 FE + E2E 17 + smokes |
-| Docs | 90 | fase-D2 + GO_LIVE |
+| Infra / CI | 90 | Swagger 1.5 |
+| Testes | 92 | unit + E2E + smokes |
+| Docs | 94 | README/STATUS/GO_LIVE alinhados |
 
 ## Contas seed
 
@@ -43,9 +43,3 @@
 ## Portas
 
 Postgres **5434**, Redis **6380**, API **3001**, FE **3000**/Compose **8080**, E2E **3010**.
-
-## PIX staging
-
-- `PIX_PROVIDER_MODE=sandbox|http`
-- `PIX_AUTO_CONFIRM=false` + `PIX_WEBHOOK_SECRET`
-- Payout: approve → COMPLETED (sandbox) ou PROCESSING + webhook `kind=PAYOUT`

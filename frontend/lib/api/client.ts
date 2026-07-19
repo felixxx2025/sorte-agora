@@ -40,11 +40,25 @@ apiClient.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    if (error.response?.status === 429) {
+    const payload = error.response?.data;
+    if (payload) {
       const msg =
-        error.response?.data?.message ||
-        'Muitas tentativas. Aguarde e tente novamente.';
-      error.message = Array.isArray(msg) ? msg.join(', ') : String(msg);
+        payload.message ||
+        (typeof payload.details === 'object' &&
+          (payload.details.message ||
+            (Array.isArray(payload.details.message)
+              ? payload.details.message.join(', ')
+              : null))) ||
+        payload.error;
+      if (msg) {
+        error.message = Array.isArray(msg) ? msg.join(', ') : String(msg);
+      }
+    }
+
+    if (error.response?.status === 429) {
+      if (!error.message || error.message === 'Request failed with status code 429') {
+        error.message = 'Muitas tentativas. Aguarde e tente novamente.';
+      }
       return Promise.reject(error);
     }
 

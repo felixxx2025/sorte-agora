@@ -115,4 +115,19 @@ export class AdminController {
   deleteBonus(@Param("id") id: string) {
     return this.adminService.deleteBonus(id);
   }
+
+  @Post("bonuses/:id/assign")
+  assignBonus(@Param("id") id: string, @Body() body: { userId: string }) {
+    return this.adminService.assignBonus(id, body.userId);
+  }
+
+  @Put("affiliates/commissions/settle")
+  settleAffiliateCommissions(@Body() body: { affiliateId?: string }) {
+    return this.adminService.settleAffiliateCommissions(body?.affiliateId);
+  }
+
+  @Put("affiliates/commissions/:id/pay")
+  payAffiliateCommission(@Param("id") id: string) {
+    return this.adminService.payAffiliateCommission(id);
+  }
 }

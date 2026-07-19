@@ -11,12 +11,14 @@ import {
   useAdminReports,
   useAdminUsers,
   useApproveWithdrawal,
+  useAssignBonus,
   useBanUser,
   useCreateBonus,
   useDeleteBonus,
   usePendingSportsBets,
   usePendingWithdrawals,
   useRejectWithdrawal,
+  useSettleAffiliateCommissions,
   useSettleSportsBet,
   useUnbanUser,
 } from '@/lib/hooks';
@@ -50,6 +52,7 @@ function AdminContent() {
     type: 'WELCOME',
     amount: '10',
   });
+  const [assignUserId, setAssignUserId] = useState('');
 
   const { data: dashboard, isLoading: dashLoading } = useAdminDashboard();
   const { data: users, isLoading: usersLoading } = useAdminUsers();
@@ -64,6 +67,8 @@ function AdminContent() {
   const settle = useSettleSportsBet();
   const createBonus = useCreateBonus();
   const deleteBonus = useDeleteBonus();
+  const assignBonus = useAssignBonus();
+  const settleCommissions = useSettleAffiliateCommissions();
 
   const [kycList, setKycList] = useState<any[]>([]);
   const loadKyc = async () => {
@@ -417,13 +422,21 @@ function AdminContent() {
               <CardTitle>Bônus cadastrados</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
+              <div className="flex gap-2 mb-4">
+                <Input
+                  placeholder="userId para atribuir"
+                  value={assignUserId}
+                  onChange={(e) => setAssignUserId(e.target.value)}
+                  className="bg-[#0F0F1A] border-white/10 text-white"
+                />
+              </div>
               {!bonuses || (bonuses as any[]).length === 0 ? (
                 <p className="text-gray-400">Nenhum bônus.</p>
               ) : (
                 (bonuses as any[]).map((b) => (
                   <div
                     key={b.id}
-                    className="flex justify-between items-center border-b border-white/5 pb-2"
+                    className="flex justify-between items-center border-b border-white/5 pb-2 gap-2"
                   >
                     <div>
                       <p className="font-medium">{b.name}</p>
@@ -432,18 +445,61 @@ function AdminContent() {
                         {b.isActive ? 'ativo' : 'inativo'}
                       </p>
                     </div>
-                    <Button
-                      className="bg-red-600 text-xs"
-                      onClick={async () => {
-                        await deleteBonus.mutateAsync(b.id);
-                        setMessage('Bônus removido');
-                      }}
-                    >
-                      Remover
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        className="bg-[#FFD700] text-[#1A1A2E] text-xs"
+                        disabled={!assignUserId || assignBonus.isPending}
+                        onClick={async () => {
+                          setError('');
+                          try {
+                            await assignBonus.mutateAsync({
+                              id: b.id,
+                              userId: assignUserId,
+                            });
+                            setMessage(`Bônus ${b.name} atribuído`);
+                          } catch (e: any) {
+                            setError(e?.message || 'Erro ao atribuir');
+                          }
+                        }}
+                      >
+                        Atribuir
+                      </Button>
+                      <Button
+                        className="bg-red-600 text-xs"
+                        onClick={async () => {
+                          await deleteBonus.mutateAsync(b.id);
+                          setMessage('Bônus removido');
+                        }}
+                      >
+                        Remover
+                      </Button>
+                    </div>
                   </div>
                 ))
               )}
+            </CardContent>
+          </Card>
+
+          <Card className="bg-[#16213E] border-white/10">
+            <CardHeader>
+              <CardTitle>Comissões de afiliado</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button
+                className="bg-[#FFD700] text-[#1A1A2E]"
+                disabled={settleCommissions.isPending}
+                onClick={async () => {
+                  setError('');
+                  try {
+                    const r = await settleCommissions.mutateAsync(undefined);
+                    setMessage(`Comissões liquidadas: ${r?.settled ?? 0}`);
+                  } catch (e: any) {
+                    setError(e?.message || 'Erro ao liquidar comissões');
+                  }
+                }}
+              >
+                Liquidar todas PENDING → PAID
+              </Button>
             </CardContent>
           </Card>
         </div>

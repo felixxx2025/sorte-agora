@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Smoke de integração API — Fase B
+# Smoke de integração API — pós Fase D3
 # Uso: ./scripts/smoke-api.sh  (requer backend em :3001)
 
 set -euo pipefail

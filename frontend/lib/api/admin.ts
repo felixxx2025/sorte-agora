@@ -138,4 +138,18 @@ export const adminApi = {
   async deleteBonus(id: string): Promise<void> {
     await apiClient.delete(`/admin/bonuses/${id}`);
   },
+
+  async assignBonus(id: string, userId: string): Promise<any> {
+    const response = await apiClient.post(`/admin/bonuses/${id}/assign`, {
+      userId,
+    });
+    return response.data;
+  },
+
+  async settleAffiliateCommissions(affiliateId?: string): Promise<any> {
+    const response = await apiClient.put('/admin/affiliates/commissions/settle', {
+      affiliateId,
+    });
+    return response.data;
+  },
 };
