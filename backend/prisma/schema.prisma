@@ -40,6 +40,17 @@ model User {
   
   resetToken        String?   @unique
   resetTokenExpiry  DateTime?
+
+  emailVerificationToken  String?   @unique
+  emailVerificationExpiry DateTime?
+
+  depositLimitDaily   Decimal? @db.Decimal(20, 8)
+  depositLimitWeekly  Decimal? @db.Decimal(20, 8)
+  depositLimitMonthly Decimal? @db.Decimal(20, 8)
+  lossLimitDaily      Decimal? @db.Decimal(20, 8)
+  lossLimitWeekly     Decimal? @db.Decimal(20, 8)
+  lossLimitMonthly    Decimal? @db.Decimal(20, 8)
+  sessionTimeLimitMinutes Int?
   
   vipLevelId        String?
   vipLevel          VipLevel? @relation(fields: [vipLevelId], references: [id])
@@ -63,6 +74,7 @@ model User {
   auditLogs         AuditLog[]
   missionProgress   VipMissionProgress[]
   chatMessages      ChatMessage[]
+  favorites         FavoriteGame[]
   
   @@index([email])
   @@index([isKycVerified])
@@ -155,21 +167,44 @@ model CasinoGame {
   providerGameId  String
   name            String
   category        String
+  slug            String?  @unique
+  description     String?
+  volatility      String?
+  features        Json?
   
   thumbnail       String
   rtp             Decimal?  @db.Decimal(5, 2)
   minBet          Decimal  @db.Decimal(20, 8)
   maxBet          Decimal  @db.Decimal(20, 8)
+
+  hasJackpot      Boolean  @default(false)
+  jackpotAmount   Decimal? @db.Decimal(20, 8)
+  demoAvailable   Boolean  @default(true)
+  isNew           Boolean  @default(false)
   
   isActive        Boolean  @default(true)
   
   createdAt       DateTime @default(now())
   
   sessions        CasinoSession[]
+  favorites       FavoriteGame[]
   
   @@unique([provider, providerGameId])
   @@index([category])
   @@map("casino_games")
+}
+
+model FavoriteGame {
+  id        String     @id @default(cuid())
+  userId    String
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  gameId    String
+  game      CasinoGame @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  createdAt DateTime   @default(now())
+
+  @@unique([userId, gameId])
+  @@index([userId])
+  @@map("favorite_games")
 }
 
 model CasinoSession {
@@ -413,17 +448,25 @@ model AuditLog {
 // ============================================
 
 model PromoBanner {
-  id        String    @id @default(cuid())
-  title     String
-  subtitle  String?
-  imageUrl  String?
-  href      String?
-  sortOrder Int       @default(0)
-  isActive  Boolean   @default(true)
-  validFrom DateTime  @default(now())
-  validTo   DateTime?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  id                   String    @id @default(cuid())
+  title                String
+  subtitle             String?
+  imageUrl             String?
+  href                 String?
+  slug                 String?   @unique
+  terms                String?
+  bonusPercentage      Decimal?  @db.Decimal(5, 2)
+  freeSpins            Int?
+  wageringRequirement  Int?
+  minDeposit           Decimal?  @db.Decimal(20, 8)
+  maxBonus             Decimal?  @db.Decimal(20, 8)
+  promoCode            String?
+  sortOrder            Int       @default(0)
+  isActive             Boolean   @default(true)
+  validFrom            DateTime  @default(now())
+  validTo              DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 
   @@index([isActive, sortOrder])
   @@map("promo_banners")

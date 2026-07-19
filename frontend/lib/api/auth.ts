@@ -129,4 +129,16 @@ export const authApi = {
     const response = await apiClient.post('/auth/reset-password', data);
     return response.data;
   },
+
+  async verifyEmail(token: string): Promise<{ message: string }> {
+    const response = await apiClient.get('/auth/verify-email', {
+      params: { token },
+    });
+    return response.data;
+  },
+
+  async resendVerification(email?: string): Promise<{ message: string }> {
+    const response = await apiClient.post('/auth/resend-verification', email ? { email } : {});
+    return response.data;
+  },
 };

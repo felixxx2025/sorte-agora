@@ -15,11 +15,23 @@ export interface CasinoGame {
   providerGameId: string;
   name: string;
   category: string;
-  thumbnail: string;
+  thumbnail?: string;
+  thumbnailUrl?: string;
   rtp?: number;
+  volatility?: string;
   minBet: number;
   maxBet: number;
   isActive: boolean;
+  isNew?: boolean;
+  isHot?: boolean;
+}
+
+export interface JackpotGame {
+  id: string;
+  name: string;
+  amount: number;
+  currency: string;
+  thumbnailUrl?: string;
 }
 
 export interface CasinoSession {
@@ -58,6 +70,16 @@ export const casinoApi = {
 
   async getSessions(): Promise<CasinoSession[]> {
     const response = await apiClient.get('/casino/sessions');
+    return response.data;
+  },
+
+  async getJackpots(): Promise<JackpotGame[]> {
+    const response = await apiClient.get('/casino/jackpots');
+    return Array.isArray(response.data) ? response.data : [];
+  },
+
+  async launchDemo(id: string): Promise<LaunchGameResponse> {
+    const response = await apiClient.post(`/casino/games/${id}/demo`);
     return response.data;
   },
 };

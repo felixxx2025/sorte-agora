@@ -6,6 +6,7 @@ import {
 import { MailService } from "../../common/services/mail.service";
 import { StorageService } from "../../common/services/storage.service";
 import { PrismaService } from "../../database/prisma.service";
+import { ResponsibleGamingDto } from "./dto/responsible-gaming.dto";
 import { SubmitKycDto } from "./dto/submit-kyc.dto";
 import { UpdateUserDto } from "./dto/update-user.dto";
 
@@ -35,10 +36,86 @@ export class UsersService {
         vipPoints: true,
         vipLevelId: true,
         selfExcludedUntil: true,
+        depositLimitDaily: true,
+        depositLimitWeekly: true,
+        depositLimitMonthly: true,
+        lossLimitDaily: true,
+        lossLimitWeekly: true,
+        lossLimitMonthly: true,
+        sessionTimeLimitMinutes: true,
         account: true,
         createdAt: true,
       },
     });
+  }
+
+  async updateResponsibleGaming(userId: string, dto: ResponsibleGamingDto) {
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        ...(dto.depositLimitDaily !== undefined && {
+          depositLimitDaily: dto.depositLimitDaily,
+        }),
+        ...(dto.depositLimitWeekly !== undefined && {
+          depositLimitWeekly: dto.depositLimitWeekly,
+        }),
+        ...(dto.depositLimitMonthly !== undefined && {
+          depositLimitMonthly: dto.depositLimitMonthly,
+        }),
+        ...(dto.lossLimitDaily !== undefined && {
+          lossLimitDaily: dto.lossLimitDaily,
+        }),
+        ...(dto.lossLimitWeekly !== undefined && {
+          lossLimitWeekly: dto.lossLimitWeekly,
+        }),
+        ...(dto.lossLimitMonthly !== undefined && {
+          lossLimitMonthly: dto.lossLimitMonthly,
+        }),
+        ...(dto.sessionTimeLimitMinutes !== undefined && {
+          sessionTimeLimitMinutes: dto.sessionTimeLimitMinutes,
+        }),
+      },
+      select: {
+        depositLimitDaily: true,
+        depositLimitWeekly: true,
+        depositLimitMonthly: true,
+        lossLimitDaily: true,
+        lossLimitWeekly: true,
+        lossLimitMonthly: true,
+        sessionTimeLimitMinutes: true,
+      },
+    });
+  }
+
+  async listFavorites(userId: string) {
+    return this.prisma.favoriteGame.findMany({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+      include: { game: true },
+    });
+  }
+
+  async toggleFavorite(userId: string, gameId: string) {
+    const game = await this.prisma.casinoGame.findUnique({
+      where: { id: gameId },
+    });
+    if (!game) {
+      throw new NotFoundException("Game not found");
+    }
+
+    const existing = await this.prisma.favoriteGame.findUnique({
+      where: { userId_gameId: { userId, gameId } },
+    });
+
+    if (existing) {
+      await this.prisma.favoriteGame.delete({ where: { id: existing.id } });
+      return { favorited: false };
+    }
+
+    await this.prisma.favoriteGame.create({
+      data: { userId, gameId },
+    });
+    return { favorited: true };
   }
 
   async updateProfile(userId: string, updateUserDto: UpdateUserDto) {
@@ -147,6 +224,8 @@ export class UsersService {
         deletedAt: new Date(),
         resetToken: null,
         resetTokenExpiry: null,
+        emailVerificationToken: null,
+        emailVerificationExpiry: null,
       },
     });
 

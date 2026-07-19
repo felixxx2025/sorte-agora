@@ -88,6 +88,8 @@ describe("FinancialService", () => {
       selfExcludedUntil: null,
       deletedAt: null,
       isActive: true,
+      isKycVerified: true,
+      depositLimitDaily: null,
     });
     mockPrismaService.transaction.aggregate.mockResolvedValue({
       _sum: { amount: 0 },

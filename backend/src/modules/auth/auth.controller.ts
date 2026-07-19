@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Post,
+  Query,
   Request,
   UseGuards,
 } from "@nestjs/common";
@@ -17,6 +18,7 @@ import { ForgotPasswordDto } from "./dto/forgot-password.dto";
 import { LoginDto } from "./dto/login.dto";
 import { RefreshTokenDto } from "./dto/refresh-token.dto";
 import { RegisterDto } from "./dto/register.dto";
+import { ResendVerificationDto } from "./dto/resend-verification.dto";
 import { ResetPasswordDto } from "./dto/reset-password.dto";
 import { VerifyMfaDto } from "./dto/verify-mfa.dto";
 
@@ -50,6 +52,26 @@ export class AuthController {
   @Get("profile")
   getProfile(@Request() req) {
     return req.user;
+  }
+
+  @Public()
+  @Throttle({ default: { limit: 20, ttl: 60000 } })
+  @Get("verify-email")
+  async verifyEmail(@Query("token") token: string) {
+    return this.authService.verifyEmail(token);
+  }
+
+  @Public()
+  @Throttle({ default: { limit: 3, ttl: 60000 } })
+  @Post("resend-verification")
+  async resendVerification(
+    @Request() req,
+    @Body() body: ResendVerificationDto,
+  ) {
+    return this.authService.resendVerification({
+      userId: req.user?.id,
+      email: body.email,
+    });
   }
 
   @Public()

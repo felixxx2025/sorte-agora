@@ -1,0 +1,4 @@
+source=https://github.com/GizzZmo/Cassanova
+cloned=2026-07-19
+purpose=reference-only-for-SORTE-AGORA-correlation
+license=MIT

@@ -7,13 +7,17 @@ import { cn } from '@/lib/utils';
 const SIDE_ITEMS = [
   { href: '/home', label: 'Início', icon: '🏠' },
   { href: '/casino', label: 'Cassino', icon: '🎰' },
-  { href: '/casino?category=live', label: 'Ao Vivo', icon: '🔴' },
+  { href: '/casino/live', label: 'Ao Vivo', icon: '🔴' },
   { href: '/crash', label: 'Crash', icon: '📈' },
   { href: '/sports', label: 'Esportes', icon: '⚽' },
   { href: '/sports?isLive=true', label: 'Esportes Live', icon: '📺' },
+  { href: '/promotions', label: 'Promoções', icon: '🎁' },
+  { href: '/favorites', label: 'Favoritos', icon: '⭐' },
   { href: '/wallet', label: 'Carteira', icon: '💰' },
   { href: '/vip', label: 'VIP', icon: '👑' },
   { href: '/affiliates', label: 'Afiliados', icon: '🤝' },
+  { href: '/settings', label: 'Configurações', icon: '⚙️' },
+  { href: '/kyc', label: 'KYC', icon: '🪪' },
   { href: '/profile', label: 'Perfil', icon: '👤' },
 ];
 

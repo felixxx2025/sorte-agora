@@ -1,11 +1,11 @@
 'use client';
 
 import { AuthGuard } from '@/components/AuthGuard';
+import { JackpotTicker } from '@/components/casino/JackpotTicker';
 import { PromoCarousel, type PromoItem } from '@/components/casino/PromoCarousel';
 import Loading from '@/components/ui/loading';
-import { useBalance } from '@/lib/hooks';
+import { useBalance, useSportsEvents } from '@/lib/hooks';
 import { usePromos } from '@/lib/hooks/usePromos';
-import { useSportsEvents } from '@/lib/hooks';
 import Link from 'next/link';
 
 const STATIC_PROMOS: PromoItem[] = [
@@ -96,6 +96,9 @@ function HomeContent() {
             ))}
           </div>
         </section>
+
+        {/* Jackpot ticker */}
+        <JackpotTicker />
 
         {/* Crash highlight */}
         <section>

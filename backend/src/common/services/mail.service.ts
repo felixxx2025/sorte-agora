@@ -66,4 +66,13 @@ export class MailService {
       html: `<p>Olá,</p><p>Clique para redefinir sua senha:</p><p><a href="${resetUrl}">${resetUrl}</a></p><p>O link expira em 1 hora.</p>`,
     });
   }
+
+  async sendEmailVerification(to: string, verifyUrl: string) {
+    return this.sendMail({
+      to,
+      subject: "SORTE AGORA — Confirme seu e-mail",
+      text: `Confirme seu e-mail: ${verifyUrl}`,
+      html: `<p>Olá,</p><p>Clique para confirmar seu e-mail:</p><p><a href="${verifyUrl}">${verifyUrl}</a></p><p>O link expira em 24 horas.</p>`,
+    });
+  }
 }

@@ -5,13 +5,23 @@ import { Input } from '@/components/ui/input';
 import Loading from '@/components/ui/loading';
 import { financialApi } from '@/lib/api';
 import { useBalance, useDeposit, useTransactions, useWithdraw } from '@/lib/hooks';
-import { useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { Suspense, useEffect, useState } from 'react';
 
 function WalletContent() {
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get('tab');
   const [depositAmount, setDepositAmount] = useState('');
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [pixKey, setPixKey] = useState('');
-  const [activeTab, setActiveTab] = useState<'deposit' | 'withdraw'>('deposit');
+  const [activeTab, setActiveTab] = useState<'deposit' | 'withdraw'>(
+    tabParam === 'withdraw' ? 'withdraw' : 'deposit',
+  );
+
+  useEffect(() => {
+    if (tabParam === 'withdraw') setActiveTab('withdraw');
+    else if (tabParam === 'deposit') setActiveTab('deposit');
+  }, [tabParam]);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [pendingPix, setPendingPix] = useState<{
@@ -260,7 +270,9 @@ function WalletContent() {
 export default function WalletPage() {
   return (
     <AuthGuard>
-      <WalletContent />
+      <Suspense>
+        <WalletContent />
+      </Suspense>
     </AuthGuard>
   );
 }

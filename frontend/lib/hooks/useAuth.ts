@@ -147,3 +147,15 @@ export function useResetPassword() {
     mutationFn: (data: ResetPasswordInput) => authApi.resetPassword(data),
   });
 }
+
+export function useVerifyEmail() {
+  return useMutation({
+    mutationFn: (token: string) => authApi.verifyEmail(token),
+  });
+}
+
+export function useResendVerification() {
+  return useMutation({
+    mutationFn: () => authApi.resendVerification(),
+  });
+}

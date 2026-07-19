@@ -50,6 +50,19 @@ export class CasinoService {
     return game;
   }
 
+  async getGameBySlug(slug: string) {
+    const game = await this.prisma.casinoGame.findUnique({ where: { slug } });
+    if (!game) throw new NotFoundException("Game not found");
+    return game;
+  }
+
+  async getJackpots() {
+    return this.prisma.casinoGame.findMany({
+      where: { hasJackpot: true, isActive: true },
+      orderBy: { jackpotAmount: "desc" },
+    });
+  }
+
   async launchGame(
     gameId: string,
     launchGameDto: LaunchGameDto & { userId: string },

@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  Param,
   Post,
   Put,
   UseGuards,
@@ -10,6 +11,7 @@ import {
 import { JwtAuthGuard } from "../../common/guards/auth.guard";
 import { CurrentUser } from "../../common/decorators/user.decorator";
 import { UsersService } from "./users.service";
+import { ResponsibleGamingDto } from "./dto/responsible-gaming.dto";
 import { SubmitKycDto } from "./dto/submit-kyc.dto";
 import { UpdateUserDto } from "./dto/update-user.dto";
 
@@ -29,6 +31,27 @@ export class UsersController {
     @Body() updateUserDto: UpdateUserDto,
   ) {
     return this.usersService.updateProfile(user.id, updateUserDto);
+  }
+
+  @Put("responsible-gaming")
+  updateResponsibleGaming(
+    @CurrentUser() user: any,
+    @Body() dto: ResponsibleGamingDto,
+  ) {
+    return this.usersService.updateResponsibleGaming(user.id, dto);
+  }
+
+  @Get("favorites")
+  listFavorites(@CurrentUser() user: any) {
+    return this.usersService.listFavorites(user.id);
+  }
+
+  @Post("favorites/:gameId")
+  toggleFavorite(
+    @CurrentUser() user: any,
+    @Param("gameId") gameId: string,
+  ) {
+    return this.usersService.toggleFavorite(user.id, gameId);
   }
 
   @Post("kyc")

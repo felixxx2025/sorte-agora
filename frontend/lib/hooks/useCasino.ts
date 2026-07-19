@@ -29,3 +29,18 @@ export function useCasinoSessions() {
     queryFn: () => casinoApi.getSessions(),
   });
 }
+
+export function useJackpots() {
+  return useQuery({
+    queryKey: ['casino', 'jackpots'],
+    queryFn: () => casinoApi.getJackpots(),
+    refetchInterval: 15_000,
+    staleTime: 10_000,
+  });
+}
+
+export function useLaunchDemo() {
+  return useMutation({
+    mutationFn: (id: string) => casinoApi.launchDemo(id),
+  });
+}

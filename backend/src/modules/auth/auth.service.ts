@@ -58,6 +58,11 @@ export class AuthService {
       }
     }
 
+    const emailVerificationToken = this.generateResetToken();
+    const emailVerificationExpiry = new Date(
+      Date.now() + 24 * 60 * 60 * 1000,
+    );
+
     const user = await this.prisma.user.create({
       data: {
         email: registerDto.email,
@@ -68,6 +73,8 @@ export class AuthService {
         dateOfBirth: new Date(registerDto.dateOfBirth),
         referralCode: this.generateReferralCode(),
         referredById,
+        emailVerificationToken,
+        emailVerificationExpiry,
       },
       select: {
         id: true,
@@ -84,6 +91,15 @@ export class AuthService {
         currency: registerDto.currency || "BRL",
       },
     });
+
+    try {
+      const frontendUrl =
+        this.configService.get("FRONTEND_URL") || "http://localhost:3000";
+      const verifyUrl = `${frontendUrl}/verify-email?token=${emailVerificationToken}`;
+      await this.mailService.sendEmailVerification(user.email, verifyUrl);
+    } catch {
+      // registration must not fail if mail fails
+    }
 
     const tokens = await this.issueTokens(user);
 
@@ -411,6 +427,88 @@ export class AuthService {
     });
 
     return { message: "Password reset successfully" };
+  }
+
+  async verifyEmail(token: string) {
+    if (!token) {
+      throw new BadRequestException("token is required");
+    }
+
+    const user = await this.prisma.user.findFirst({
+      where: {
+        emailVerificationToken: token,
+        emailVerificationExpiry: { gt: new Date() },
+      },
+    });
+
+    if (!user) {
+      throw new BadRequestException("Invalid or expired verification token");
+    }
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        isVerified: true,
+        emailVerificationToken: null,
+        emailVerificationExpiry: null,
+      },
+    });
+
+    return { message: "Email verified successfully", verified: true };
+  }
+
+  async resendVerification(opts: { userId?: string; email?: string }) {
+    if (!opts.userId && !opts.email) {
+      throw new BadRequestException("email is required when not authenticated");
+    }
+
+    let user =
+      opts.userId
+        ? await this.prisma.user.findUnique({ where: { id: opts.userId } })
+        : opts.email
+          ? await this.prisma.user.findUnique({ where: { email: opts.email } })
+          : null;
+
+    if (!user) {
+      if (opts.email && !opts.userId) {
+        return {
+          message:
+            "If the email exists and is unverified, a verification link has been sent",
+        };
+      }
+      throw new BadRequestException("User not found");
+    }
+
+    if (user.isVerified) {
+      return { message: "Email already verified" };
+    }
+
+    const emailVerificationToken = this.generateResetToken();
+    const emailVerificationExpiry = new Date(
+      Date.now() + 24 * 60 * 60 * 1000,
+    );
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { emailVerificationToken, emailVerificationExpiry },
+    });
+
+    const frontendUrl =
+      this.configService.get("FRONTEND_URL") || "http://localhost:3000";
+    const verifyUrl = `${frontendUrl}/verify-email?token=${emailVerificationToken}`;
+
+    try {
+      await this.mailService.sendEmailVerification(user.email, verifyUrl);
+    } catch {
+      // ignore mail errors
+    }
+
+    return {
+      message: "Verification email sent",
+      ...(this.configService.get("NODE_ENV") !== "production"
+        ? { emailVerificationToken, verifyUrl }
+        : {}),
+    };
   }
 
   private async issueTokens(user: {

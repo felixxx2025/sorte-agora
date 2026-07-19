@@ -32,10 +32,24 @@ export class CasinoController {
   }
 
   @Public()
+  @Get("jackpots")
+  getJackpots() {
+    this.assertEnabled();
+    return this.casinoService.getJackpots();
+  }
+
+  @Public()
   @Get("games")
   getGames(@Query("category") category?: string) {
     this.assertEnabled();
     return this.casinoService.getGames(category);
+  }
+
+  @Public()
+  @Get("games/by-slug/:slug")
+  getGameBySlug(@Param("slug") slug: string) {
+    this.assertEnabled();
+    return this.casinoService.getGameBySlug(slug);
   }
 
   @Get("games/:id")

@@ -11,6 +11,8 @@ export {
   useVerifyMfa,
   useForgotPassword,
   useResetPassword,
+  useVerifyEmail,
+  useResendVerification,
 } from './useAuth';
 export {
   useBalance,
@@ -23,6 +25,8 @@ export {
   useCasinoGame,
   useLaunchGame,
   useCasinoSessions,
+  useJackpots,
+  useLaunchDemo,
 } from './useCasino';
 export {
   useSportsEvents,
@@ -38,6 +42,10 @@ export {
 export {
   useUserProfile,
   useUpdateProfile,
+  useFavorites,
+  useToggleFavorite,
+  useResponsibleGaming,
+  useUpdateResponsibleGaming,
 } from './useUsers';
 export {
   useAffiliateDashboard,
@@ -63,6 +71,6 @@ export {
   useAssignBonus,
   useSettleAffiliateCommissions,
 } from './useAdmin';
-export { usePromos, useCreatePromo, useDeletePromo } from './usePromos';
+export { usePromos, usePromoDetail, useClaimPromo, useCreatePromo, useDeletePromo } from './usePromos';
 export { useCrashState, usePlaceCrashBet, useCrashCashout } from './useCrash';
 export { useChatMessages, useSendChatMessage } from './useChat';

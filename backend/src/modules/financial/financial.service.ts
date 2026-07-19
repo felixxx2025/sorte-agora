@@ -245,6 +245,14 @@ export class FinancialService {
   async createWithdraw(userId: string, withdrawDto: WithdrawDto) {
     await this.assertNotSelfExcluded(userId);
 
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { isKycVerified: true },
+    });
+    if (!user?.isKycVerified) {
+      throw new ForbiddenException("KYC verification required for withdrawals");
+    }
+
     const account = await this.prisma.account.findUnique({
       where: { userId },
     });
@@ -544,7 +552,19 @@ export class FinancialService {
     const limitKey =
       type === "DEPOSIT" ? "DEPOSIT_DAILY_LIMIT" : "WITHDRAW_DAILY_LIMIT";
     const defaultLimit = type === "DEPOSIT" ? 50000 : 20000;
-    const limit = Number(this.configService.get(limitKey) || defaultLimit);
+    let limit = Number(this.configService.get(limitKey) || defaultLimit);
+
+    if (type === "DEPOSIT") {
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { depositLimitDaily: true },
+      });
+      if (user?.depositLimitDaily != null) {
+        const userLimit = Number(user.depositLimitDaily);
+        limit = Math.min(limit, userLimit);
+      }
+    }
+
     const start = new Date();
     start.setHours(0, 0, 0, 0);
 
