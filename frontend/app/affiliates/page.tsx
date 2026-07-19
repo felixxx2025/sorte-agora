@@ -45,7 +45,7 @@ function AffiliatesContent() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-8">Programa de Afiliados</h1>
+      <h1 className="font-display text-3xl font-extrabold text-sa-gold mb-8">Programa de Afiliados</h1>
 
       {(message || error) && (
         <p className={`mb-4 text-sm ${error ? 'text-red-400' : 'text-green-400'}`}>
@@ -54,7 +54,7 @@ function AffiliatesContent() {
       )}
 
       {notAffiliate ? (
-        <Card className="bg-[#16213E] border-white/10 max-w-lg">
+        <Card className="sa-panel border-sa-red/30 max-w-lg">
           <CardHeader>
             <CardTitle>Torne-se afiliado</CardTitle>
           </CardHeader>
@@ -74,15 +74,15 @@ function AffiliatesContent() {
       ) : (
         <>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-            <Card className="bg-[#16213E] border-white/10">
+            <Card className="sa-panel border-sa-red/30">
               <CardHeader>
                 <CardTitle className="text-sm text-gray-300">Indicações</CardTitle>
               </CardHeader>
-              <CardContent className="text-2xl font-bold text-[#FFD700]">
+              <CardContent className="text-2xl font-bold text-sa-gold">
                 {(dashboard as any).totalReferrals}
               </CardContent>
             </Card>
-            <Card className="bg-[#16213E] border-white/10">
+            <Card className="sa-panel border-sa-red/30">
               <CardHeader>
                 <CardTitle className="text-sm text-gray-300">Comissão total</CardTitle>
               </CardHeader>
@@ -90,7 +90,7 @@ function AffiliatesContent() {
                 R$ {Number((dashboard as any).totalCommission || 0).toFixed(2)}
               </CardContent>
             </Card>
-            <Card className="bg-[#16213E] border-white/10">
+            <Card className="sa-panel border-sa-red/30">
               <CardHeader>
                 <CardTitle className="text-sm text-gray-300">Pendente</CardTitle>
               </CardHeader>
@@ -100,12 +100,12 @@ function AffiliatesContent() {
             </Card>
           </div>
 
-          <Card className="bg-[#16213E] border-white/10 mb-6">
+          <Card className="sa-panel border-sa-red/30 mb-6">
             <CardHeader>
               <CardTitle>Seu link</CardTitle>
             </CardHeader>
             <CardContent>
-              <code className="text-[#FFD700] break-all">
+              <code className="text-sa-gold break-all">
                 {(dashboard as any).trackingCode
                   ? `${typeof window !== 'undefined' ? window.location.origin : ''}/register?ref=${(dashboard as any).trackingCode}`
                   : '—'}
@@ -113,7 +113,7 @@ function AffiliatesContent() {
             </CardContent>
           </Card>
 
-          <Card className="bg-[#16213E] border-white/10">
+          <Card className="sa-panel border-sa-red/30">
             <CardHeader>
               <CardTitle>Comissões</CardTitle>
             </CardHeader>
@@ -126,7 +126,7 @@ function AffiliatesContent() {
                     <span>
                       {c.source} · {c.status}
                     </span>
-                    <span className="text-[#FFD700]">R$ {Number(c.amount).toFixed(2)}</span>
+                    <span className="text-sa-gold">R$ {Number(c.amount).toFixed(2)}</span>
                   </div>
                 ))
               )}

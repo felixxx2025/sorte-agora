@@ -1,90 +1,116 @@
 'use client';
 
 import { AuthGuard } from '@/components/AuthGuard';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { GameTile } from '@/components/casino/GameTile';
 import Loading from '@/components/ui/loading';
 import { useCasinoGames, useLaunchGame } from '@/lib/hooks';
-import { useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense, useEffect, useState } from 'react';
+
+const CATEGORIES = [
+  { key: 'all', label: 'Todos' },
+  { key: 'live', label: '📺 Ao Vivo' },
+  { key: 'slots', label: '🎰 Slots' },
+  { key: 'crash', label: '🚀 Crash' },
+  { key: 'table', label: '🃏 Mesa' },
+  { key: 'jackpot', label: '💎 Jackpot' },
+];
 
 function CasinoContent() {
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const initialCat = searchParams.get('category') ?? 'all';
+  const [selectedCategory, setSelectedCategory] = useState(initialCat);
   const [error, setError] = useState('');
-  const categories = ['all', 'slots', 'live', 'table', 'jackpot', 'crash'];
+
+  useEffect(() => {
+    const cat = searchParams.get('category') ?? 'all';
+    setSelectedCategory(cat);
+  }, [searchParams]);
 
   const { data: games, isLoading } = useCasinoGames(
     selectedCategory === 'all' ? undefined : selectedCategory,
   );
   const launchGame = useLaunchGame();
 
+  const selectCategory = (cat: string) => {
+    setSelectedCategory(cat);
+    const params = new URLSearchParams(searchParams.toString());
+    if (cat === 'all') params.delete('category');
+    else params.set('category', cat);
+    router.replace(`/casino?${params.toString()}`);
+  };
+
   const handleLaunchGame = async (gameId: string) => {
     setError('');
     try {
-      const result = await launchGame.mutateAsync({
-        id: gameId,
-        data: { betAmount: 10 },
-      });
-      if (result.gameUrl) {
-        window.open(result.gameUrl, '_blank');
-      }
+      const result = await launchGame.mutateAsync({ id: gameId, data: { betAmount: 10 } });
+      if (result.gameUrl) window.open(result.gameUrl, '_blank');
     } catch {
       setError('Erro ao iniciar jogo');
     }
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-8">Cassino</h1>
-
-      {error && (
-        <p className="text-red-400 mb-4" role="alert">
-          {error}
-        </p>
-      )}
-
-      <div className="flex flex-wrap gap-2 mb-6">
-        {categories.map((category) => (
-          <Button
-            key={category}
-            onClick={() => setSelectedCategory(category)}
-            className={
-              selectedCategory === category
-                ? 'bg-[#FFD700] text-[#1A1A2E]'
-                : 'bg-[#16213E] text-white'
-            }
-          >
-            {category === 'all' ? 'Todos' : category.charAt(0).toUpperCase() + category.slice(1)}
-          </Button>
-        ))}
-      </div>
-
-      {isLoading ? (
-        <div className="flex justify-center py-12">
-          <Loading size="lg" />
+    <div className="sa-page min-h-screen">
+      <div className="max-w-screen-xl mx-auto px-4 py-6 space-y-5">
+        <div className="flex items-center justify-between">
+          <h1 className="font-display text-2xl font-extrabold text-sa-gold">Cassino</h1>
         </div>
-      ) : !games || games.length === 0 ? (
-        <p className="text-gray-400">Nenhum jogo encontrado nesta categoria.</p>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {games.map((game: any) => (
-            <Card key={game.id} className="bg-[#16213E] border-white/10">
-              <CardHeader>
-                <CardTitle className="text-white text-base">{game.name}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-gray-400 mb-3">{game.category}</p>
-                <Button
-                  onClick={() => handleLaunchGame(game.id)}
-                  disabled={launchGame.isPending}
-                  className="w-full bg-gradient-to-r from-[#FFD700] to-[#FFA500] text-[#1A1A2E]"
-                >
-                  Jogar
-                </Button>
-              </CardContent>
-            </Card>
+
+        {error && (
+          <p className="text-red-400 text-sm" role="alert">
+            {error}
+          </p>
+        )}
+
+        {/* Category chips */}
+        <div className="flex flex-wrap gap-2">
+          {CATEGORIES.map((c) => (
+            <button
+              key={c.key}
+              type="button"
+              onClick={() => selectCategory(c.key)}
+              className={
+                selectedCategory === c.key
+                  ? 'sa-chip bg-sa-red/60 text-sa-gold border-sa-gold/50'
+                  : 'sa-chip opacity-60 hover:opacity-100 transition'
+              }
+            >
+              {c.label}
+            </button>
           ))}
         </div>
-      )}
+
+        {isLoading ? (
+          <div className="flex justify-center py-12">
+            <Loading size="lg" />
+          </div>
+        ) : !games || games.length === 0 ? (
+          <p className="text-sa-muted py-12 text-center">Nenhum jogo nesta categoria.</p>
+        ) : (
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-2">
+            {games.map((game: any) => (
+              <button
+                key={game.id}
+                type="button"
+                onClick={() => handleLaunchGame(game.id)}
+                disabled={launchGame.isPending}
+                className="block text-left"
+                aria-label={`Jogar ${game.name}`}
+              >
+                <GameTile
+                  name={game.name}
+                  category={game.category}
+                  thumbnail={game.thumbnailUrl}
+                  href="#"
+                  badge={game.isNew ? 'NOVO' : game.isHot ? 'HOT' : undefined}
+                />
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -92,7 +118,9 @@ function CasinoContent() {
 export default function CasinoPage() {
   return (
     <AuthGuard>
-      <CasinoContent />
+      <Suspense>
+        <CasinoContent />
+      </Suspense>
     </AuthGuard>
   );
 }

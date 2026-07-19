@@ -1,7 +1,6 @@
 'use client';
 
 import { AuthGuard } from '@/components/AuthGuard';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useVipLevels, useVipMissions, useVipStatus } from '@/lib/hooks';
 import { Loader2 } from 'lucide-react';
 
@@ -13,75 +12,91 @@ function VipContent() {
   const isLoading = statusLoading || levelsLoading || missionsLoading;
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-8">Programa VIP</h1>
+    <div className="sa-page min-h-screen">
+      <div className="max-w-screen-md mx-auto px-4 py-6 space-y-5">
+        <h1 className="font-display text-2xl font-extrabold text-sa-gold">👑 Programa VIP</h1>
 
-      {isLoading ? (
-        <div className="flex justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-[#FFD700]" />
-        </div>
-      ) : (
-        <>
-          {vipStatus && (
-            <Card className="bg-gradient-to-r from-[#16213E] to-[#1A1A2E] border-[#FFD700]/30 mb-8">
-              <CardHeader>
-                <CardTitle className="text-white">Seu Status VIP</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-2xl font-bold text-[#FFD700]">
+        {isLoading ? (
+          <div className="flex justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-sa-gold" />
+          </div>
+        ) : (
+          <>
+            {vipStatus && (
+              <div
+                className="sa-panel p-5"
+                style={{ background: 'linear-gradient(120deg,#8b0000,#1a0a0a 60%,#ffd70022)' }}
+              >
+                <p className="text-xs uppercase tracking-widest text-sa-muted">Seu nível</p>
+                <p className="font-display text-3xl font-extrabold text-sa-gold mt-1">
                   {vipStatus.level?.name || 'Bronze'}
                 </p>
-                <p className="text-gray-300 mt-2">Pontos: {vipStatus.points || 0}</p>
-              </CardContent>
-            </Card>
-          )}
+                <div className="mt-3 flex items-center gap-3">
+                  <p className="text-sm text-white/70">
+                    Pontos: <span className="font-bold text-sa-gold">{vipStatus.points || 0}</span>
+                  </p>
+                </div>
+              </div>
+            )}
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card className="bg-[#16213E] border-white/10">
-              <CardHeader>
-                <CardTitle className="text-gray-300">Níveis</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {!vipLevels || vipLevels.length === 0 ? (
-                  <p className="text-gray-400">Níveis indisponíveis.</p>
-                ) : (
-                  vipLevels.map((level: any) => (
-                    <div key={level.id} className="flex justify-between border-b border-white/5 pb-2">
-                      <span>{level.name}</span>
-                      <span className="text-[#FFD700]">{level.pointsRequired} pts</span>
-                    </div>
-                  ))
-                )}
-              </CardContent>
-            </Card>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <div className="sa-panel p-5">
+                <h2 className="font-display font-bold text-sa-gold mb-4">Níveis</h2>
+                <div className="space-y-2">
+                  {!vipLevels || vipLevels.length === 0 ? (
+                    <p className="text-sa-muted text-sm">Níveis indisponíveis.</p>
+                  ) : (
+                    vipLevels.map((level: any) => (
+                      <div
+                        key={level.id}
+                        className={`flex justify-between items-center rounded-lg px-3 py-2 ${
+                          vipStatus?.level?.id === level.id
+                            ? 'bg-sa-gold/10 border border-sa-gold/30'
+                            : 'bg-black/30'
+                        }`}
+                      >
+                        <span className="text-sm text-white">{level.name}</span>
+                        <span className="text-xs font-bold text-sa-gold">{level.pointsRequired} pts</span>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
 
-            <Card className="bg-[#16213E] border-white/10">
-              <CardHeader>
-                <CardTitle className="text-gray-300">Missões</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {(() => {
-                  const list = Array.isArray(missions)
-                    ? missions
-                    : [
-                        ...((missions as any)?.daily || []),
-                        ...((missions as any)?.weekly || []),
-                      ];
-                  if (!list.length) {
-                    return <p className="text-gray-400">Nenhuma missão ativa.</p>;
-                  }
-                  return list.map((mission: any, idx: number) => (
-                    <div key={mission.id || idx} className="border-b border-white/5 pb-2">
-                      <p className="font-medium">{mission.title || mission.name}</p>
-                      <p className="text-sm text-gray-400">{mission.description}</p>
-                    </div>
-                  ));
-                })()}
-              </CardContent>
-            </Card>
-          </div>
-        </>
-      )}
+              <div className="sa-panel p-5">
+                <h2 className="font-display font-bold text-sa-gold mb-4">Missões Ativas</h2>
+                <div className="space-y-3">
+                  {(() => {
+                    const list = Array.isArray(missions)
+                      ? missions
+                      : [
+                          ...((missions as any)?.daily || []),
+                          ...((missions as any)?.weekly || []),
+                        ];
+                    if (!list.length) {
+                      return <p className="text-sa-muted text-sm">Nenhuma missão ativa.</p>;
+                    }
+                    return list.map((mission: any, idx: number) => (
+                      <div
+                        key={mission.id || idx}
+                        className="rounded-lg bg-black/30 px-3 py-2.5 border border-sa-red/20"
+                      >
+                        <p className="font-medium text-sm text-white">{mission.title || mission.name}</p>
+                        {mission.description && (
+                          <p className="text-xs text-sa-muted mt-1">{mission.description}</p>
+                        )}
+                        {mission.reward && (
+                          <p className="text-xs text-sa-gold mt-1">+{mission.reward} pts</p>
+                        )}
+                      </div>
+                    ));
+                  })()}
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }

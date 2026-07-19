@@ -1,8 +1,6 @@
 'use client';
 
 import { AuthGuard } from '@/components/AuthGuard';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import Loading from '@/components/ui/loading';
 import { financialApi } from '@/lib/api';
@@ -94,8 +92,9 @@ function WalletContent() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-8">Carteira</h1>
+    <div className="sa-page min-h-screen">
+      <div className="max-w-screen-md mx-auto px-4 py-6 space-y-5">
+        <h1 className="font-display text-2xl font-extrabold text-sa-gold">Caixa</h1>
 
       {isLoading ? (
         <div className="flex justify-center py-12">
@@ -103,173 +102,157 @@ function WalletContent() {
         </div>
       ) : (
         <>
-          <Card className="bg-[#16213E] border-white/10 mb-8">
-            <CardHeader>
-              <CardTitle className="text-gray-300">Saldo Atual</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-4xl font-bold text-[#FFD700]">
-                R$ {balance?.balance != null ? Number(balance.balance).toFixed(2) : '0.00'}
-              </p>
-              <p className="text-sm text-gray-400 mt-2">
-                Bloqueado: R${' '}
-                {balance?.lockedBalance != null ? Number(balance.lockedBalance).toFixed(2) : '0.00'}
-              </p>
-            </CardContent>
-          </Card>
+          {/* Balance */}
+          <div className="sa-panel p-5" style={{ background: 'linear-gradient(120deg,#8b0000,#1a0a0a 55%)' }}>
+            <p className="text-xs uppercase tracking-widest text-sa-muted">Saldo Disponível</p>
+            <p className="font-display text-4xl font-extrabold text-sa-gold mt-1">
+              R$ {balance?.balance != null ? Number(balance.balance).toFixed(2) : '0.00'}
+            </p>
+            <p className="text-xs text-sa-muted mt-2">
+              Bloqueado: R$ {balance?.lockedBalance != null ? Number(balance.lockedBalance).toFixed(2) : '0.00'}
+            </p>
+          </div>
 
           {(message || error) && (
             <p
-              className={`mb-4 text-sm ${error ? 'text-red-400' : 'text-green-400'}`}
+              className={`text-sm ${error ? 'text-red-400' : 'text-green-400'}`}
               role={error ? 'alert' : 'status'}
             >
               {error || message}
             </p>
           )}
 
-          <div className="flex gap-4 mb-6">
-            <Button
+          {/* Tabs */}
+          <div className="flex gap-2">
+            <button
+              type="button"
               onClick={() => setActiveTab('deposit')}
-              className={activeTab === 'deposit' ? 'bg-[#FFD700] text-[#1A1A2E]' : 'bg-[#16213E]'}
+              className={activeTab === 'deposit' ? 'sa-chip bg-sa-gold/20 text-sa-gold border-sa-gold/50' : 'sa-chip opacity-60 hover:opacity-100 transition'}
             >
-              Depositar
-            </Button>
-            <Button
+              💰 Depositar
+            </button>
+            <button
+              type="button"
               onClick={() => setActiveTab('withdraw')}
-              className={activeTab === 'withdraw' ? 'bg-red-600' : 'bg-[#16213E]'}
+              className={activeTab === 'withdraw' ? 'sa-chip bg-sa-red/40 text-white border-sa-red/60' : 'sa-chip opacity-60 hover:opacity-100 transition'}
             >
-              Sacar
-            </Button>
+              🏧 Sacar
+            </button>
           </div>
 
           {activeTab === 'deposit' && (
-            <Card className="bg-[#16213E] border-white/10 mb-8">
-              <CardHeader>
-                <CardTitle className="text-gray-300">Depósito via PIX</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleDeposit} className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Valor (R$)</label>
-                    <Input
-                      type="number"
-                      value={depositAmount}
-                      onChange={(e) => setDepositAmount(e.target.value)}
-                      min="10"
-                      step="0.01"
-                      required
-                      className="bg-[#0F0F1A] border-white/10 text-white"
-                    />
-                  </div>
-                  <Button
-                    type="submit"
-                    disabled={deposit.isPending}
-                    className="w-full bg-gradient-to-r from-[#FFD700] to-[#FFA500] text-[#1A1A2E] disabled:opacity-50"
-                  >
-                    {deposit.isPending ? 'Processando...' : 'Depositar'}
-                  </Button>
-                </form>
+            <div className="sa-panel p-5 space-y-4">
+              <h2 className="font-display font-bold text-sa-gold">Depósito via PIX</h2>
+              <form onSubmit={handleDeposit} className="space-y-4">
+                <div>
+                  <label className="block text-xs text-sa-muted mb-1.5">Valor (R$)</label>
+                  <Input
+                    type="number"
+                    value={depositAmount}
+                    onChange={(e) => setDepositAmount(e.target.value)}
+                    min="10"
+                    step="0.01"
+                    required
+                    className="bg-black/50 border-sa-red/40 text-white"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={deposit.isPending}
+                  className="w-full rounded-lg bg-sa-gold text-black font-display font-extrabold py-3 hover:bg-sa-gold-dim transition disabled:opacity-50"
+                >
+                  {deposit.isPending ? 'Processando...' : 'Gerar PIX'}
+                </button>
+              </form>
 
-                {pendingPix && (
-                  <div className="mt-6 space-y-3 border-t border-white/10 pt-4">
-                    <p className="text-sm text-gray-400">
-                      Status: <span className="text-[#FFD700]">{pendingPix.status}</span>
-                      {pendingPix.externalId && (
-                        <span className="block text-xs mt-1 font-mono">{pendingPix.externalId}</span>
-                      )}
-                    </p>
-                    {pendingPix.qrCode?.startsWith('data:') && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={pendingPix.qrCode}
-                        alt="QR PIX"
-                        className="w-40 h-40 bg-white rounded mx-auto object-contain"
-                      />
+              {pendingPix && (
+                <div className="mt-4 space-y-3 border-t border-sa-red/20 pt-4">
+                  <p className="text-sm text-sa-muted">
+                    Status: <span className="text-sa-gold">{pendingPix.status}</span>
+                    {pendingPix.externalId && (
+                      <span className="block text-xs mt-1 font-mono text-sa-muted">{pendingPix.externalId}</span>
                     )}
-                    <p className="text-xs text-gray-500 break-all font-mono">{pendingPix.pixCode}</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                  </p>
+                  {pendingPix.qrCode?.startsWith('data:') && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={pendingPix.qrCode}
+                      alt="QR PIX"
+                      className="w-40 h-40 bg-white rounded mx-auto object-contain"
+                    />
+                  )}
+                  <p className="text-xs text-sa-muted break-all font-mono">{pendingPix.pixCode}</p>
+                </div>
+              )}
+            </div>
           )}
 
           {activeTab === 'withdraw' && (
-            <Card className="bg-[#16213E] border-white/10 mb-8">
-              <CardHeader>
-                <CardTitle className="text-gray-300">Saque via PIX</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleWithdraw} className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Valor (R$)</label>
-                    <Input
-                      type="number"
-                      value={withdrawAmount}
-                      onChange={(e) => setWithdrawAmount(e.target.value)}
-                      min="20"
-                      step="0.01"
-                      required
-                      className="bg-[#0F0F1A] border-white/10 text-white"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Chave PIX</label>
-                    <Input
-                      type="text"
-                      value={pixKey}
-                      onChange={(e) => setPixKey(e.target.value)}
-                      required
-                      className="bg-[#0F0F1A] border-white/10 text-white"
-                    />
-                  </div>
-                  <Button
-                    type="submit"
-                    disabled={withdraw.isPending}
-                    className="w-full bg-red-600 hover:bg-red-700 disabled:opacity-50"
-                  >
-                    {withdraw.isPending ? 'Processando...' : 'Solicitar Saque'}
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
+            <div className="sa-panel p-5 space-y-4">
+              <h2 className="font-display font-bold text-sa-gold">Saque via PIX</h2>
+              <form onSubmit={handleWithdraw} className="space-y-4">
+                <div>
+                  <label className="block text-xs text-sa-muted mb-1.5">Valor (R$)</label>
+                  <Input
+                    type="number"
+                    value={withdrawAmount}
+                    onChange={(e) => setWithdrawAmount(e.target.value)}
+                    min="20"
+                    step="0.01"
+                    required
+                    className="bg-black/50 border-sa-red/40 text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-sa-muted mb-1.5">Chave PIX</label>
+                  <Input
+                    type="text"
+                    value={pixKey}
+                    onChange={(e) => setPixKey(e.target.value)}
+                    required
+                    className="bg-black/50 border-sa-red/40 text-white"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={withdraw.isPending}
+                  className="w-full rounded-lg bg-sa-red text-sa-gold font-display font-extrabold py-3 hover:bg-sa-red/80 transition disabled:opacity-50 border border-sa-red"
+                >
+                  {withdraw.isPending ? 'Processando...' : 'Solicitar Saque'}
+                </button>
+              </form>
+            </div>
           )}
 
-          <Card className="bg-[#16213E] border-white/10">
-            <CardHeader>
-              <CardTitle className="text-gray-300">Histórico de Transações</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {!transactions || transactions.length === 0 ? (
-                <p className="text-gray-400">Nenhuma transação encontrada.</p>
-              ) : (
-                <div className="space-y-2">
-                  {transactions.map((tx: any) => (
-                    <div
-                      key={tx.id}
-                      className="flex justify-between items-center p-3 bg-[#0F0F1A] rounded"
-                    >
-                      <div>
-                        <p className="font-medium">{tx.type}</p>
-                        <p className="text-sm text-gray-400">
-                          {tx.createdAt ? new Date(tx.createdAt).toLocaleDateString() : '—'} ·{' '}
-                          {tx.status}
-                        </p>
-                      </div>
-                      <p
-                        className={`font-bold ${
-                          tx.type === 'DEPOSIT' ? 'text-green-400' : 'text-red-400'
-                        }`}
-                      >
-                        {tx.type === 'DEPOSIT' ? '+' : '-'} R$ {Number(tx.amount).toFixed(2)}
+          {/* Transaction history */}
+          <div className="sa-panel p-5">
+            <h2 className="font-display font-bold text-sa-gold mb-4">Histórico</h2>
+            {!transactions || transactions.length === 0 ? (
+              <p className="text-sa-muted text-sm">Nenhuma transação encontrada.</p>
+            ) : (
+              <div className="space-y-2">
+                {transactions.map((tx: any) => (
+                  <div
+                    key={tx.id}
+                    className="flex justify-between items-center rounded-lg bg-black/40 px-3 py-2.5"
+                  >
+                    <div>
+                      <p className="text-sm font-medium text-white">{tx.type}</p>
+                      <p className="text-[11px] text-sa-muted">
+                        {tx.createdAt ? new Date(tx.createdAt).toLocaleDateString('pt-BR') : '—'} · {tx.status}
                       </p>
                     </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                    <p className={`font-bold text-sm ${tx.type === 'DEPOSIT' ? 'text-green-400' : 'text-red-400'}`}>
+                      {tx.type === 'DEPOSIT' ? '+' : '-'} R$ {Number(tx.amount).toFixed(2)}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </>
       )}
+      </div>
     </div>
   );
 }

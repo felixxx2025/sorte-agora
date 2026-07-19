@@ -1,23 +1,37 @@
 'use client';
 
 import { AuthGuard } from '@/components/AuthGuard';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { usePlaceBet, useSportsEvent, useSportsEvents } from '@/lib/hooks';
-import { useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense, useEffect, useState } from 'react';
 
 function SportsContent() {
-  const [showLive, setShowLive] = useState(false);
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const initialLive = searchParams.get('isLive') === 'true';
+  const [showLive, setShowLive] = useState(initialLive);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [betAmount, setBetAmount] = useState('');
   const [selectedSelection, setSelectedSelection] = useState<any>(null);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
 
+  useEffect(() => {
+    setShowLive(searchParams.get('isLive') === 'true');
+  }, [searchParams]);
+
   const { data: events = [], isLoading, isError, refetch } = useSportsEvents(showLive);
   const { data: selectedEvent } = useSportsEvent(selectedEventId || '');
   const placeBetMutation = usePlaceBet();
+
+  const toggleLive = (val: boolean) => {
+    setShowLive(val);
+    const params = new URLSearchParams(searchParams.toString());
+    if (val) params.set('isLive', 'true');
+    else params.delete('isLive');
+    router.replace(`/sports?${params.toString()}`);
+  };
 
   const placeBet = async () => {
     setMessage('');
@@ -26,7 +40,6 @@ function SportsContent() {
       setError('Selecione uma aposta e insira o valor');
       return;
     }
-
     try {
       await placeBetMutation.mutateAsync({
         selectionId: selectedSelection.id,
@@ -37,199 +50,180 @@ function SportsContent() {
       setSelectedSelection(null);
       setSelectedEventId(null);
     } catch (e: any) {
-      const msg =
-        e?.response?.data?.message ||
-        e?.message ||
-        'Erro ao realizar aposta';
+      const msg = e?.response?.data?.message || e?.message || 'Erro ao realizar aposta';
       setError(Array.isArray(msg) ? msg.join(', ') : String(msg));
     }
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-8">Apostas Esportivas</h1>
+    <div className="sa-page min-h-screen">
+      <div className="max-w-screen-xl mx-auto px-4 py-6 space-y-5">
+        <h1 className="font-display text-2xl font-extrabold text-sa-gold">Apostas Esportivas</h1>
 
-      {(message || error) && (
-        <p
-          className={`mb-4 text-sm ${error ? 'text-red-400' : 'text-green-400'}`}
-          role={error ? 'alert' : 'status'}
-        >
-          {error || message}
-        </p>
-      )}
-
-      {isLoading ? (
-        <div className="flex justify-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#FFD700]" />
-        </div>
-      ) : isError ? (
-        <div className="text-center py-12 space-y-4">
-          <p className="text-red-400" role="alert">
-            Não foi possível carregar eventos.
+        {(message || error) && (
+          <p
+            className={`text-sm ${error ? 'text-red-400' : 'text-green-400'}`}
+            role={error ? 'alert' : 'status'}
+          >
+            {error || message}
           </p>
-          <Button onClick={() => refetch()} className="bg-[#16213E]">
-            Tentar novamente
-          </Button>
-        </div>
-      ) : (
-        <>
-          <div className="flex gap-4 mb-6">
-            <Button
-              onClick={() => setShowLive(false)}
-              className={!showLive ? 'bg-[#FFD700] text-[#1A1A2E]' : 'bg-[#16213E]'}
-            >
-              Todos os Eventos
-            </Button>
-            <Button
-              onClick={() => setShowLive(true)}
-              className={showLive ? 'bg-red-600' : 'bg-[#16213E]'}
-            >
-              Ao Vivo
-            </Button>
+        )}
+
+        {isLoading ? (
+          <div className="flex justify-center py-12">
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-sa-gold" />
           </div>
-
-          {!selectedEventId ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {(events as any[]).map((event) => (
-                <Card
-                  key={event.id}
-                  className="bg-[#16213E] border-white/10 cursor-pointer hover:border-[#FFD700]/40 transition"
-                  onClick={() => setSelectedEventId(event.id)}
-                >
-                  <CardHeader>
-                    <CardTitle className="text-gray-300">{event.name || 'Evento'}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-gray-400 mb-2">
-                      {event.startTime ? new Date(event.startTime).toLocaleString() : '—'}
-                    </p>
-                    {event.isLive && (
-                      <span className="inline-block bg-red-600 text-xs px-2 py-1 rounded">
-                        AO VIVO
-                      </span>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          ) : (
-            <div className="max-w-4xl mx-auto">
-              <Button
-                onClick={() => {
-                  setSelectedEventId(null);
-                  setSelectedSelection(null);
-                }}
-                className="mb-6 bg-[#16213E]"
+        ) : isError ? (
+          <div className="text-center py-12 space-y-4">
+            <p className="text-red-400" role="alert">Não foi possível carregar eventos.</p>
+            <button
+              onClick={() => refetch()}
+              className="rounded-lg sa-panel px-4 py-2 text-sm text-sa-gold"
+            >
+              Tentar novamente
+            </button>
+          </div>
+        ) : (
+          <>
+            {/* Live / All toggle */}
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => toggleLive(false)}
+                className={!showLive ? 'sa-chip bg-sa-red/60 text-sa-gold border-sa-gold/50' : 'sa-chip opacity-60 hover:opacity-100 transition'}
               >
-                ← Voltar
-              </Button>
+                Todos
+              </button>
+              <button
+                type="button"
+                onClick={() => toggleLive(true)}
+                className={showLive ? 'sa-chip bg-sa-red text-white border-sa-red' : 'sa-chip opacity-60 hover:opacity-100 transition'}
+              >
+                <span className="inline-block h-1.5 w-1.5 rounded-full bg-current mr-1.5 animate-pulse" />
+                AO VIVO
+              </button>
+            </div>
 
-              {!selectedEvent ? (
-                <div className="flex justify-center py-12">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#FFD700]" />
-                </div>
-              ) : (
-                <>
-                  <Card className="bg-[#16213E] border-white/10 mb-6">
-                    <CardHeader>
-                      <CardTitle className="text-gray-300">{selectedEvent.name}</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm text-gray-400">
-                        Início:{' '}
-                        {selectedEvent.startTime
-                          ? new Date(selectedEvent.startTime).toLocaleString()
-                          : '—'}
+            {!selectedEventId ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {(events as any[]).map((event) => (
+                  <button
+                    key={event.id}
+                    type="button"
+                    className="sa-panel p-4 text-left hover:border-sa-red/70 transition w-full"
+                    onClick={() => setSelectedEventId(event.id)}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="font-display font-bold text-white text-sm">{event.name || 'Evento'}</p>
+                      {event.isLive && (
+                        <span className="sa-chip text-[10px] flex-shrink-0 bg-sa-red/80">AO VIVO</span>
+                      )}
+                    </div>
+                    <p className="text-xs text-sa-muted mt-1">
+                      {event.startTime ? new Date(event.startTime).toLocaleString('pt-BR') : '—'}
+                    </p>
+                    {event.league && (
+                      <p className="text-xs text-sa-gold/60 mt-1">{event.league}</p>
+                    )}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="max-w-3xl">
+                <button
+                  type="button"
+                  onClick={() => { setSelectedEventId(null); setSelectedSelection(null); }}
+                  className="sa-chip mb-4"
+                >
+                  ← Voltar
+                </button>
+
+                {!selectedEvent ? (
+                  <div className="flex justify-center py-12">
+                    <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-sa-gold" />
+                  </div>
+                ) : (
+                  <>
+                    <div className="sa-panel p-4 mb-5">
+                      <h2 className="font-display font-bold text-white">{selectedEvent.name}</h2>
+                      <p className="text-xs text-sa-muted mt-1">
+                        {selectedEvent.startTime ? new Date(selectedEvent.startTime).toLocaleString('pt-BR') : '—'}
                       </p>
-                    </CardContent>
-                  </Card>
+                    </div>
 
-                  <h2 className="text-xl font-bold mb-4">Mercados de Apostas</h2>
-                  <div className="space-y-4">
-                    {selectedEvent.markets?.map((market: any) => (
-                      <Card key={market.id} className="bg-[#16213E] border-white/10">
-                        <CardHeader>
-                          <CardTitle className="text-gray-300 text-lg">{market.name}</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            {market.selections?.map((selection: any) => (
-                              <div
-                                key={selection.id}
-                                className={`p-4 rounded cursor-pointer border-2 transition ${
-                                  selectedSelection?.id === selection.id
-                                    ? 'border-[#FFD700] bg-[#FFD700]/10'
-                                    : 'border-white/10 hover:border-white/30'
+                    <div className="space-y-4">
+                      {selectedEvent.markets?.map((market: any) => (
+                        <div key={market.id} className="sa-panel p-4">
+                          <h3 className="font-display font-bold text-sa-gold text-sm mb-3">{market.name}</h3>
+                          <div className="grid grid-cols-3 gap-2">
+                            {market.selections?.map((sel: any) => (
+                              <button
+                                key={sel.id}
+                                type="button"
+                                onClick={() => setSelectedSelection(sel)}
+                                className={`rounded-lg border-2 p-3 text-left transition ${
+                                  selectedSelection?.id === sel.id
+                                    ? 'border-sa-gold bg-sa-gold/10'
+                                    : 'border-sa-red/20 hover:border-sa-red/50'
                                 }`}
-                                onClick={() => setSelectedSelection(selection)}
                               >
-                                <p className="font-medium mb-2">{selection.name}</p>
-                                <p className="text-2xl font-bold text-[#FFD700]">
-                                  {Number(selection.odds).toFixed(2)}
+                                <p className="text-xs text-white">{sel.name}</p>
+                                <p className="font-display text-lg font-extrabold text-sa-gold">
+                                  {Number(sel.odds).toFixed(2)}
                                 </p>
-                              </div>
+                              </button>
                             ))}
                           </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-
-                  {selectedSelection && (
-                    <Card className="bg-[#16213E] border-white/10 mt-6">
-                      <CardHeader>
-                        <CardTitle className="text-gray-300">Confirmar Aposta</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-4">
-                          <div>
-                            <p className="text-sm text-gray-400">Seleção</p>
-                            <p className="font-medium">{selectedSelection.name}</p>
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium mb-2">Valor (R$)</label>
-                            <Input
-                              type="number"
-                              value={betAmount}
-                              onChange={(e) => setBetAmount(e.target.value)}
-                              min="1"
-                              step="0.01"
-                              className="bg-[#0F0F1A] border-white/10 text-white"
-                            />
-                          </div>
-                          {betAmount && (
-                            <p className="text-[#FFD700]">
-                              Retorno potencial: R${' '}
-                              {(
-                                parseFloat(betAmount) * Number(selectedSelection.odds)
-                              ).toFixed(2)}
-                            </p>
-                          )}
-                          <Button
-                            onClick={placeBet}
-                            disabled={placeBetMutation.isPending}
-                            className="w-full bg-gradient-to-r from-[#FFD700] to-[#FFA500] text-[#1A1A2E]"
-                          >
-                            {placeBetMutation.isPending ? 'Enviando...' : 'Confirmar Aposta'}
-                          </Button>
                         </div>
-                      </CardContent>
-                    </Card>
-                  )}
-                </>
-              )}
-            </div>
-          )}
+                      ))}
+                    </div>
 
-          {(!events || (events as any[]).length === 0) && !selectedEventId && (
-            <div className="text-center py-12">
-              <p className="text-gray-400 text-xl">
+                    {selectedSelection && (
+                      <div className="sa-panel p-5 mt-5 space-y-4">
+                        <h3 className="font-display font-bold text-sa-gold">Confirmar Aposta</h3>
+                        <div>
+                          <p className="text-xs text-sa-muted">Seleção</p>
+                          <p className="text-sm font-medium text-white">{selectedSelection.name}</p>
+                        </div>
+                        <div>
+                          <label className="block text-xs text-sa-muted mb-1.5">Valor (R$)</label>
+                          <Input
+                            type="number"
+                            value={betAmount}
+                            onChange={(e) => setBetAmount(e.target.value)}
+                            min="1"
+                            step="0.01"
+                            className="bg-black/50 border-sa-red/40 text-white"
+                          />
+                        </div>
+                        {betAmount && (
+                          <p className="text-sa-gold text-sm">
+                            Retorno potencial: R$ {(parseFloat(betAmount) * Number(selectedSelection.odds)).toFixed(2)}
+                          </p>
+                        )}
+                        <button
+                          type="button"
+                          onClick={placeBet}
+                          disabled={placeBetMutation.isPending}
+                          className="w-full rounded-lg bg-sa-gold text-black font-display font-extrabold py-3 hover:bg-sa-gold-dim transition disabled:opacity-50"
+                        >
+                          {placeBetMutation.isPending ? 'Enviando...' : 'Confirmar Aposta'}
+                        </button>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+
+            {(!events || (events as any[]).length === 0) && !selectedEventId && (
+              <p className="text-sa-muted text-center py-12">
                 {showLive ? 'Nenhum evento ao vivo no momento.' : 'Nenhum evento encontrado.'}
               </p>
-            </div>
-          )}
-        </>
-      )}
+            )}
+          </>
+        )}
+      </div>
     </div>
   );
 }
@@ -237,7 +231,9 @@ function SportsContent() {
 export default function SportsPage() {
   return (
     <AuthGuard>
-      <SportsContent />
+      <Suspense>
+        <SportsContent />
+      </Suspense>
     </AuthGuard>
   );
 }
