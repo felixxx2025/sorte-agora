@@ -1,8 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../../database/prisma.service';
-import { SportsService } from '../sports/sports.service';
-import { BanUserDto } from './dto/ban-user.dto';
-import { UpdateBonusDto } from './dto/update-bonus.dto';
+import { Injectable, NotFoundException } from "@nestjs/common";
+import { PrismaService } from "../../database/prisma.service";
+import { SportsService } from "../sports/sports.service";
+import { BanUserDto } from "./dto/ban-user.dto";
+import { UpdateBonusDto } from "./dto/update-bonus.dto";
 
 @Injectable()
 export class AdminService {
@@ -28,7 +28,7 @@ export class AdminService {
   async getUsers() {
     return this.prisma.user.findMany({
       include: { account: true },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
       take: 100,
     });
   }
@@ -57,7 +57,7 @@ export class AdminService {
 
   async getTransactions() {
     return this.prisma.transaction.findMany({
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
       take: 100,
     });
   }
@@ -65,11 +65,11 @@ export class AdminService {
   async getPendingWithdrawals() {
     return this.prisma.transaction.findMany({
       where: {
-        type: 'WITHDRAWAL',
-        status: 'PENDING',
+        type: "WITHDRAWAL",
+        status: "PENDING",
       },
       include: { user: true },
-      orderBy: { createdAt: 'asc' },
+      orderBy: { createdAt: "asc" },
     });
   }
 
@@ -80,14 +80,14 @@ export class AdminService {
     });
 
     if (!transaction) {
-      throw new NotFoundException('Transaction not found');
+      throw new NotFoundException("Transaction not found");
     }
 
     // Update transaction status
     await this.prisma.transaction.update({
       where: { id: transactionId },
       data: {
-        status: 'COMPLETED',
+        status: "COMPLETED",
         processedAt: new Date(),
       },
     });
@@ -100,7 +100,7 @@ export class AdminService {
       },
     });
 
-    return { message: 'Withdrawal approved' };
+    return { message: "Withdrawal approved" };
   }
 
   async rejectWithdrawal(transactionId: string) {
@@ -110,14 +110,14 @@ export class AdminService {
     });
 
     if (!transaction) {
-      throw new NotFoundException('Transaction not found');
+      throw new NotFoundException("Transaction not found");
     }
 
     // Update transaction status
     await this.prisma.transaction.update({
       where: { id: transactionId },
       data: {
-        status: 'FAILED',
+        status: "FAILED",
         processedAt: new Date(),
       },
     });
@@ -131,7 +131,7 @@ export class AdminService {
       },
     });
 
-    return { message: 'Withdrawal rejected' };
+    return { message: "Withdrawal rejected" };
   }
 
   async getReports() {
@@ -140,15 +140,15 @@ export class AdminService {
     const [deposits, withdrawals, wins, activeUsers, newRegistrations] =
       await Promise.all([
         this.prisma.transaction.aggregate({
-          where: { type: 'DEPOSIT', status: 'COMPLETED' },
+          where: { type: "DEPOSIT", status: "COMPLETED" },
           _sum: { amount: true },
         }),
         this.prisma.transaction.aggregate({
-          where: { type: 'WITHDRAWAL', status: 'COMPLETED' },
+          where: { type: "WITHDRAWAL", status: "COMPLETED" },
           _sum: { amount: true },
         }),
         this.prisma.transaction.aggregate({
-          where: { type: 'WIN', status: 'COMPLETED' },
+          where: { type: "WIN", status: "COMPLETED" },
           _sum: { amount: true },
         }),
         this.prisma.user.count({
@@ -181,20 +181,27 @@ export class AdminService {
 
   async listPendingKyc() {
     return this.prisma.kyCRecord.findMany({
-      where: { status: 'PENDING' },
+      where: { status: "PENDING" },
       include: {
         user: {
           select: { id: true, email: true, firstName: true, lastName: true },
         },
       },
-      orderBy: { createdAt: 'asc' },
+      orderBy: { createdAt: "asc" },
     });
   }
 
-  async reviewKyc(kycId: string, decision: 'APPROVED' | 'REJECTED', adminId: string, reason?: string) {
-    const record = await this.prisma.kyCRecord.findUnique({ where: { id: kycId } });
+  async reviewKyc(
+    kycId: string,
+    decision: "APPROVED" | "REJECTED",
+    adminId: string,
+    reason?: string,
+  ) {
+    const record = await this.prisma.kyCRecord.findUnique({
+      where: { id: kycId },
+    });
     if (!record) {
-      throw new NotFoundException('KYC record not found');
+      throw new NotFoundException("KYC record not found");
     }
 
     await this.prisma.kyCRecord.update({
@@ -203,11 +210,11 @@ export class AdminService {
         status: decision,
         reviewedAt: new Date(),
         reviewedBy: adminId,
-        rejectionReason: decision === 'REJECTED' ? reason || 'Rejected' : null,
+        rejectionReason: decision === "REJECTED" ? reason || "Rejected" : null,
       },
     });
 
-    if (decision === 'APPROVED') {
+    if (decision === "APPROVED") {
       await this.prisma.user.update({
         where: { id: record.userId },
         data: { isKycVerified: true, isVerified: true },
@@ -219,24 +226,24 @@ export class AdminService {
 
   async listPendingSportsBets() {
     return this.prisma.sportsBet.findMany({
-      where: { status: 'PENDING' },
+      where: { status: "PENDING" },
       include: {
         user: { select: { id: true, email: true } },
         event: { select: { id: true, name: true } },
         selection: { select: { id: true, name: true, odds: true } },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
       take: 100,
     });
   }
 
-  async settleSportsBet(betId: string, result: 'WON' | 'LOST') {
+  async settleSportsBet(betId: string, result: "WON" | "LOST") {
     return this.sportsService.settleBet(betId, result);
   }
 
   async listBonuses() {
     return this.prisma.bonus.findMany({
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
       take: 100,
     });
   }

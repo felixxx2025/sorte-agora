@@ -2,12 +2,12 @@ import {
   BadRequestException,
   Injectable,
   NotFoundException,
-} from '@nestjs/common';
-import { PrismaService } from '../../database/prisma.service';
+} from "@nestjs/common";
+import { PrismaService } from "../../database/prisma.service";
 
 @Injectable()
 export class VipService {
-  constructor(private prisma: PrismaService) { }
+  constructor(private prisma: PrismaService) {}
 
   async getVipStatus(userId: string) {
     const user = await this.prisma.user.findUnique({
@@ -16,14 +16,14 @@ export class VipService {
     });
 
     if (!user) {
-      throw new NotFoundException('User not found');
+      throw new NotFoundException("User not found");
     }
 
     let vipLevel = user.vipLevel;
     if (!vipLevel) {
       vipLevel = await this.prisma.vipLevel.findFirst({
         where: { level: 1 },
-        orderBy: { level: 'asc' },
+        orderBy: { level: "asc" },
       });
 
       if (vipLevel) {
@@ -54,14 +54,14 @@ export class VipService {
 
   async getVipLevels() {
     return this.prisma.vipLevel.findMany({
-      orderBy: { level: 'asc' },
+      orderBy: { level: "asc" },
     });
   }
 
   async getMissions(userId: string) {
     const missions = await this.prisma.vipMission.findMany({
       where: { isActive: true },
-      orderBy: { type: 'asc' },
+      orderBy: { type: "asc" },
     });
 
     const dailyKey = this.dailyPeriodKey();
@@ -73,7 +73,7 @@ export class VipService {
     };
 
     for (const mission of missions) {
-      const periodKey = mission.type === 'WEEKLY' ? weeklyKey : dailyKey;
+      const periodKey = mission.type === "WEEKLY" ? weeklyKey : dailyKey;
       let progress = await this.prisma.vipMissionProgress.findUnique({
         where: {
           userId_missionId_periodKey: {
@@ -107,7 +107,7 @@ export class VipService {
         completed: progress.completed,
       };
 
-      if (mission.type === 'WEEKLY') {
+      if (mission.type === "WEEKLY") {
         result.weekly.push(item);
       } else {
         result.daily.push(item);
@@ -124,7 +124,9 @@ export class VipService {
 
     for (const mission of missions) {
       const periodKey =
-        mission.type === 'WEEKLY' ? this.weeklyPeriodKey() : this.dailyPeriodKey();
+        mission.type === "WEEKLY"
+          ? this.weeklyPeriodKey()
+          : this.dailyPeriodKey();
 
       const progress = await this.prisma.vipMissionProgress.upsert({
         where: {
@@ -145,15 +147,27 @@ export class VipService {
         },
       });
 
-      if (!progress.completed && progress.progress + (progress.progress === amount ? 0 : 0) >= mission.target) {
+      if (
+        !progress.completed &&
+        progress.progress + (progress.progress === amount ? 0 : 0) >=
+          mission.target
+      ) {
         const updated = await this.prisma.vipMissionProgress.findUnique({
           where: { id: progress.id },
         });
-        if (updated && !updated.completed && updated.progress >= mission.target) {
+        if (
+          updated &&
+          !updated.completed &&
+          updated.progress >= mission.target
+        ) {
           await this.prisma.$transaction([
             this.prisma.vipMissionProgress.update({
               where: { id: updated.id },
-              data: { completed: true, completedAt: new Date(), progress: mission.target },
+              data: {
+                completed: true,
+                completedAt: new Date(),
+                progress: mission.target,
+              },
             }),
             this.prisma.user.update({
               where: { id: userId },
@@ -172,7 +186,7 @@ export class VipService {
 
     const level = await this.prisma.vipLevel.findFirst({
       where: { pointsRequired: { lte: user.vipPoints } },
-      orderBy: { level: 'desc' },
+      orderBy: { level: "desc" },
     });
 
     if (level && level.id !== user.vipLevelId) {

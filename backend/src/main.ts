@@ -1,37 +1,50 @@
-import { ValidationPipe } from '@nestjs/common';
-import { NestFactory } from '@nestjs/core';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import helmet from 'helmet';
-import { AppModule } from './app.module';
-import { HttpExceptionFilter } from './common/filters/http-exception.filter';
-import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
-import { TransformInterceptor } from './common/interceptors/transform.interceptor';
-import './tracing';
+import { ValidationPipe } from "@nestjs/common";
+import { NestFactory } from "@nestjs/core";
+import { NestExpressApplication } from "@nestjs/platform-express";
+import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
+import helmet from "helmet";
+import { join } from "path";
+import { AppModule } from "./app.module";
+import { HttpExceptionFilter } from "./common/filters/http-exception.filter";
+import { LoggingInterceptor } from "./common/interceptors/logging.interceptor";
+import { TransformInterceptor } from "./common/interceptors/transform.interceptor";
+import { MailService } from "./common/services/mail.service";
+import "./tracing";
+
+function secretsAreWeak(): boolean {
+  const jwt = process.env.JWT_SECRET || "";
+  const enc = process.env.ENCRYPTION_KEY || "";
+  return (
+    !jwt ||
+    jwt.length < 32 ||
+    /change.?me|secret|default|your.?jwt/i.test(jwt) ||
+    !enc ||
+    enc.length < 32 ||
+    /change.?me|secret|default|your.?encryption/i.test(enc)
+  );
+}
 
 async function bootstrap() {
-  if (process.env.NODE_ENV === 'production') {
-    const jwt = process.env.JWT_SECRET || '';
-    const enc = process.env.ENCRYPTION_KEY || '';
-    const weak =
-      !jwt ||
-      jwt.length < 32 ||
-      /change.?me|secret|default|your.?jwt/i.test(jwt) ||
-      !enc ||
-      enc.length < 32 ||
-      /change.?me|secret|default|your.?encryption/i.test(enc);
-    if (weak) {
-      throw new Error(
-        'Refusing to start: set strong JWT_SECRET and ENCRYPTION_KEY in production',
-      );
-    }
+  const env = process.env.NODE_ENV || "development";
+  const enforce =
+    env === "production" ||
+    env === "staging" ||
+    process.env.REQUIRE_STRONG_SECRETS === "true";
+
+  if (enforce && secretsAreWeak()) {
+    throw new Error(
+      "Refusing to start: set strong JWT_SECRET and ENCRYPTION_KEY (min 32 chars, no defaults)",
+    );
   }
 
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
-  // Global prefix
-  app.setGlobalPrefix('api');
+  const uploadRoot =
+    process.env.STORAGE_LOCAL_PATH || join(process.cwd(), "uploads");
+  app.useStaticAssets(uploadRoot, { prefix: "/uploads/" });
 
-  // Security headers
+  app.setGlobalPrefix("api");
+
   app.use(
     helmet({
       contentSecurityPolicy: {
@@ -39,16 +52,18 @@ async function bootstrap() {
           defaultSrc: ["'self'"],
           styleSrc: ["'self'", "'unsafe-inline'"],
           scriptSrc: ["'self'"],
-          imgSrc: ["'self'", 'data:', 'https:'],
+          imgSrc: ["'self'", "data:", "https:", "http:"],
         },
       },
       crossOriginEmbedderPolicy: false,
     }),
   );
 
-  // CORS (vírgula-separado; ex.: http://localhost:3000,http://localhost:3010)
-  const corsOrigins = (process.env.CORS_ORIGIN || 'http://localhost:3000,http://localhost:3010,http://localhost:8080')
-    .split(',')
+  const corsOrigins = (
+    process.env.CORS_ORIGIN ||
+    "http://localhost:3000,http://localhost:3010,http://localhost:8080"
+  )
+    .split(",")
     .map((o) => o.trim())
     .filter(Boolean);
   app.enableCors({
@@ -56,7 +71,6 @@ async function bootstrap() {
     credentials: true,
   });
 
-  // Validation
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -65,33 +79,37 @@ async function bootstrap() {
     }),
   );
 
-  // Interceptors
   app.useGlobalInterceptors(new LoggingInterceptor());
   app.useGlobalInterceptors(new TransformInterceptor());
-
-  // Exception filters
   app.useGlobalFilters(new HttpExceptionFilter());
 
-  // Swagger documentation
+  const mail = app.get(MailService);
+  if ((env === "staging" || env === "production") && !mail.isSmtpReady()) {
+    // eslint-disable-next-line no-console
+    console.warn(
+      "⚠️  SMTP not configured — password reset emails will only be logged",
+    );
+  }
+
   const config = new DocumentBuilder()
-    .setTitle('SORTE AGORA API')
-    .setDescription('Platform API for SORTE AGORA betting platform')
-    .setVersion('1.0')
-    .addTag('auth', 'Authentication endpoints')
-    .addTag('users', 'User management')
-    .addTag('financial', 'Financial operations')
-    .addTag('casino', 'Casino games')
-    .addTag('sports', 'Sports betting')
-    .addTag('vip', 'VIP program')
-    .addTag('affiliates', 'Affiliate program')
-    .addTag('admin', 'Admin operations')
-    .addTag('health', 'Health check')
-    .addTag('metrics', 'Prometheus metrics')
+    .setTitle("SORTE AGORA API")
+    .setDescription("Platform API for SORTE AGORA betting platform")
+    .setVersion("1.3")
+    .addTag("auth", "Authentication endpoints")
+    .addTag("users", "User management")
+    .addTag("financial", "Financial operations")
+    .addTag("casino", "Casino games")
+    .addTag("sports", "Sports betting")
+    .addTag("vip", "VIP program")
+    .addTag("affiliates", "Affiliate program")
+    .addTag("admin", "Admin operations")
+    .addTag("health", "Health check")
+    .addTag("metrics", "Prometheus metrics")
     .addBearerAuth()
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api/docs', app, document);
+  SwaggerModule.setup("api/docs", app, document);
 
   const port = process.env.PORT || 3001;
   await app.listen(port);

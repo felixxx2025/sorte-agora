@@ -1,9 +1,9 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { VipController } from './vip.controller';
-import { VipService } from './vip.service';
-import { JwtAuthGuard } from '../../common/guards/auth.guard';
+import { Test, TestingModule } from "@nestjs/testing";
+import { VipController } from "./vip.controller";
+import { VipService } from "./vip.service";
+import { JwtAuthGuard } from "../../common/guards/auth.guard";
 
-describe('VipController', () => {
+describe("VipController", () => {
   let controller: VipController;
   let vipService: VipService;
 
@@ -33,34 +33,34 @@ describe('VipController', () => {
     jest.clearAllMocks();
   });
 
-  it('should be defined', () => {
+  it("should be defined", () => {
     expect(controller).toBeDefined();
   });
 
-  describe('getVipStatus', () => {
-    it('should return VIP status', async () => {
+  describe("getVipStatus", () => {
+    it("should return VIP status", async () => {
       const mockStatus = {
-        level: { name: 'Bronze', level: 1 },
+        level: { name: "Bronze", level: 1 },
         points: 500,
         progress: 50,
       };
 
       mockVipService.getVipStatus.mockResolvedValue(mockStatus);
 
-      const user = { id: 'user1' };
+      const user = { id: "user1" };
       const result = await controller.getVipStatus(user);
 
       expect(result).toBeDefined();
       expect(result.points).toBe(500);
-      expect(mockVipService.getVipStatus).toHaveBeenCalledWith('user1');
+      expect(mockVipService.getVipStatus).toHaveBeenCalledWith("user1");
     });
   });
 
-  describe('getVipLevels', () => {
-    it('should return all VIP levels', async () => {
+  describe("getVipLevels", () => {
+    it("should return all VIP levels", async () => {
       const mockLevels = [
-        { id: 'level1', name: 'Bronze', level: 1 },
-        { id: 'level2', name: 'Silver', level: 2 },
+        { id: "level1", name: "Bronze", level: 1 },
+        { id: "level2", name: "Silver", level: 2 },
       ];
 
       mockVipService.getVipLevels.mockResolvedValue(mockLevels);
@@ -72,22 +72,22 @@ describe('VipController', () => {
     });
   });
 
-  describe('getMissions', () => {
-    it('should return VIP missions', async () => {
+  describe("getMissions", () => {
+    it("should return VIP missions", async () => {
       const mockMissions = {
-        daily: [{ id: '1', title: 'Deposit 100', reward: 50 }],
-        weekly: [{ id: '2', title: 'Bet 500', reward: 200 }],
+        daily: [{ id: "1", title: "Deposit 100", reward: 50 }],
+        weekly: [{ id: "2", title: "Bet 500", reward: 200 }],
       };
 
       mockVipService.getMissions.mockResolvedValue(mockMissions);
 
-      const user = { id: 'user1' };
+      const user = { id: "user1" };
       const result = await controller.getMissions(user);
 
       expect(result).toBeDefined();
       expect(result.daily).toBeDefined();
       expect(result.weekly).toBeDefined();
-      expect(mockVipService.getMissions).toHaveBeenCalledWith('user1');
+      expect(mockVipService.getMissions).toHaveBeenCalledWith("user1");
     });
   });
 });

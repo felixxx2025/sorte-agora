@@ -2,12 +2,12 @@ import {
   BadRequestException,
   Injectable,
   NotFoundException,
-} from '@nestjs/common';
-import { CacheService } from '../../common/services/cache.service';
-import { PrismaService } from '../../database/prisma.service';
-import { AffiliatesService } from '../affiliates/affiliates.service';
-import { VipService } from '../vip/vip.service';
-import { PlaceBetDto } from './dto/place-bet.dto';
+} from "@nestjs/common";
+import { CacheService } from "../../common/services/cache.service";
+import { PrismaService } from "../../database/prisma.service";
+import { AffiliatesService } from "../affiliates/affiliates.service";
+import { VipService } from "../vip/vip.service";
+import { PlaceBetDto } from "./dto/place-bet.dto";
 
 @Injectable()
 export class SportsService {
@@ -16,7 +16,7 @@ export class SportsService {
     private vipService: VipService,
     private cache: CacheService,
     private affiliatesService: AffiliatesService,
-  ) { }
+  ) {}
 
   async getEvents(isLive: boolean = false) {
     const cacheKey = `sports:events:live=${isLive}`;
@@ -32,7 +32,7 @@ export class SportsService {
           },
         },
       },
-      orderBy: { startTime: 'asc' },
+      orderBy: { startTime: "asc" },
       take: 50,
     });
 
@@ -51,7 +51,7 @@ export class SportsService {
         },
       },
     });
-    if (!event) throw new NotFoundException('Event not found');
+    if (!event) throw new NotFoundException("Event not found");
     return event;
   }
 
@@ -61,10 +61,10 @@ export class SportsService {
       select: { selfExcludedUntil: true, deletedAt: true, isActive: true },
     });
     if (!user || user.deletedAt || !user.isActive) {
-      throw new BadRequestException('Account unavailable');
+      throw new BadRequestException("Account unavailable");
     }
     if (user.selfExcludedUntil && user.selfExcludedUntil > new Date()) {
-      throw new BadRequestException('Self-exclusion active');
+      throw new BadRequestException("Self-exclusion active");
     }
 
     const selection = await this.prisma.sportsSelection.findUnique({
@@ -73,7 +73,7 @@ export class SportsService {
     });
 
     if (!selection) {
-      throw new NotFoundException('Selection not found');
+      throw new NotFoundException("Selection not found");
     }
 
     const account = await this.prisma.account.findUnique({
@@ -81,11 +81,11 @@ export class SportsService {
     });
 
     if (!account) {
-      throw new NotFoundException('Account not found');
+      throw new NotFoundException("Account not found");
     }
 
     if (Number(account.balance) < Number(placeBetDto.stake)) {
-      throw new BadRequestException('Insufficient balance');
+      throw new BadRequestException("Insufficient balance");
     }
 
     const result = await this.prisma.$transaction(async (tx) => {
@@ -96,7 +96,7 @@ export class SportsService {
           selectionId: placeBetDto.selectionId,
           stake: placeBetDto.stake,
           odds: selection.odds,
-          status: 'PENDING',
+          status: "PENDING",
         },
       });
 
@@ -109,9 +109,9 @@ export class SportsService {
         data: {
           userId,
           accountId: account.id,
-          type: 'BET',
+          type: "BET",
           amount: placeBetDto.stake,
-          status: 'COMPLETED',
+          status: "COMPLETED",
         },
       });
 
@@ -119,10 +119,10 @@ export class SportsService {
     });
 
     try {
-      await this.vipService.addProgress(userId, 'BETS_COUNT', 1);
+      await this.vipService.addProgress(userId, "BETS_COUNT", 1);
       await this.vipService.addProgress(
         userId,
-        'BET_AMOUNT',
+        "BET_AMOUNT",
         Math.floor(Number(placeBetDto.stake)),
       );
     } catch {
@@ -132,7 +132,7 @@ export class SportsService {
     return {
       betId: result.id,
       potentialWin: Number(placeBetDto.stake) * Number(selection.odds),
-      status: 'PENDING',
+      status: "PENDING",
     };
   }
 
@@ -143,7 +143,7 @@ export class SportsService {
         event: true,
         selection: true,
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
       take: 50,
     });
   }
@@ -151,24 +151,24 @@ export class SportsService {
   /**
    * Liquida aposta: WON credita payout; LOST encerra sem crédito.
    */
-  async settleBet(betId: string, result: 'WON' | 'LOST') {
+  async settleBet(betId: string, result: "WON" | "LOST") {
     const bet = await this.prisma.sportsBet.findUnique({
       where: { id: betId },
     });
 
     if (!bet) {
-      throw new NotFoundException('Bet not found');
+      throw new NotFoundException("Bet not found");
     }
 
-    if (bet.status !== 'PENDING') {
+    if (bet.status !== "PENDING") {
       throw new BadRequestException(`Bet already settled as ${bet.status}`);
     }
 
-    if (result === 'LOST') {
+    if (result === "LOST") {
       return this.prisma.sportsBet.update({
         where: { id: betId },
         data: {
-          status: 'LOST',
+          status: "LOST",
           settledAt: new Date(),
           payout: 0,
         },
@@ -181,7 +181,7 @@ export class SportsService {
       const settled = await tx.sportsBet.update({
         where: { id: betId },
         data: {
-          status: 'WON',
+          status: "WON",
           settledAt: new Date(),
           payout,
         },
@@ -201,9 +201,9 @@ export class SportsService {
           data: {
             userId: bet.userId,
             accountId: account.id,
-            type: 'WIN',
+            type: "WIN",
             amount: payout,
-            status: 'COMPLETED',
+            status: "COMPLETED",
             processedAt: new Date(),
           },
         });
@@ -212,7 +212,7 @@ export class SportsService {
       return settled;
     });
 
-    await this.maybeRecordReferralCommission(bet.userId, payout, 'BET');
+    await this.maybeRecordReferralCommission(bet.userId, payout, "BET");
     return updated;
   }
 

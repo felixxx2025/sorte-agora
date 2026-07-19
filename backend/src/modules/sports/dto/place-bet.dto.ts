@@ -1,4 +1,4 @@
-import { IsNumber, IsString, Min } from 'class-validator';
+import { IsNumber, IsString, Min } from "class-validator";
 
 export class PlaceBetDto {
   @IsString()

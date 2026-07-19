@@ -10,6 +10,7 @@ export const LoginSchema = z.object({
 export const RegisterSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8),
+  dateOfBirth: z.string().min(8),
   phone: z.string().optional(),
   firstName: z.string().optional(),
   lastName: z.string().optional(),
@@ -42,8 +43,10 @@ export type ForgotPasswordInput = z.infer<typeof ForgotPasswordSchema>;
 export type ResetPasswordInput = z.infer<typeof ResetPasswordSchema>;
 
 export interface AuthResponse {
-  accessToken: string;
-  refreshToken: string;
+  accessToken?: string;
+  refreshToken?: string;
+  mfaRequired?: boolean;
+  mfaToken?: string;
   user: {
     id: string;
     email: string;
@@ -68,6 +71,14 @@ export interface MfaSecretResponse {
 export const authApi = {
   async login(data: LoginInput): Promise<AuthResponse> {
     const response = await apiClient.post('/auth/login', data);
+    return response.data;
+  },
+
+  async completeMfaLogin(data: {
+    mfaToken: string;
+    token: string;
+  }): Promise<AuthResponse> {
+    const response = await apiClient.post('/auth/mfa/login', data);
     return response.data;
   },
 

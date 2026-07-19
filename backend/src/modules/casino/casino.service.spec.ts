@@ -1,11 +1,11 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { ConfigService } from '@nestjs/config';
-import { CacheService } from '../../common/services/cache.service';
-import { PrismaService } from '../../database/prisma.service';
-import { CasinoService } from './casino.service';
-import { CASINO_PROVIDER } from './providers/casino-provider.interface';
+import { Test, TestingModule } from "@nestjs/testing";
+import { ConfigService } from "@nestjs/config";
+import { CacheService } from "../../common/services/cache.service";
+import { PrismaService } from "../../database/prisma.service";
+import { CasinoService } from "./casino.service";
+import { CASINO_PROVIDER } from "./providers/casino-provider.interface";
 
-describe('CasinoService', () => {
+describe("CasinoService", () => {
   let service: CasinoService;
 
   const mockPrismaService = {
@@ -24,8 +24,8 @@ describe('CasinoService', () => {
 
   const mockConfigService = {
     get: jest.fn((key: string) => {
-      if (key === 'CASINO_PROVIDER_MODE') return 'demo';
-      if (key === 'FRONTEND_URL') return 'http://localhost:3000';
+      if (key === "CASINO_PROVIDER_MODE") return "demo";
+      if (key === "FRONTEND_URL") return "http://localhost:3000";
       return undefined;
     }),
   };
@@ -36,10 +36,10 @@ describe('CasinoService', () => {
   };
 
   const mockCasinoProvider = {
-    name: 'demo',
+    name: "demo",
     launch: jest.fn().mockResolvedValue({
-      gameUrl: 'http://localhost:3000/casino/play?game=x',
-      mode: 'demo',
+      gameUrl: "http://localhost:3000/casino/play?game=x",
+      mode: "demo",
     }),
   };
 
@@ -62,40 +62,42 @@ describe('CasinoService', () => {
       isActive: true,
     });
     mockCasinoProvider.launch.mockResolvedValue({
-      gameUrl: 'http://localhost:3000/casino/play?game=x',
-      mode: 'demo',
+      gameUrl: "http://localhost:3000/casino/play?game=x",
+      mode: "demo",
     });
   });
 
-  it('should be defined', () => {
+  it("should be defined", () => {
     expect(service).toBeDefined();
   });
 
-  describe('getGames', () => {
-    it('should return games', async () => {
-      mockPrismaService.casinoGame.findMany.mockResolvedValue([{ id: '1', name: 'Slots' }]);
+  describe("getGames", () => {
+    it("should return games", async () => {
+      mockPrismaService.casinoGame.findMany.mockResolvedValue([
+        { id: "1", name: "Slots" },
+      ]);
       const result = await service.getGames();
       expect(result).toHaveLength(1);
     });
   });
 
-  describe('launchGame', () => {
-    it('should launch demo game', async () => {
+  describe("launchGame", () => {
+    it("should launch demo game", async () => {
       mockPrismaService.casinoGame.findUnique.mockResolvedValue({
-        id: 'g1',
-        providerGameId: 'slots-1',
-        name: 'Slots',
-        provider: 'DEMO',
+        id: "g1",
+        providerGameId: "slots-1",
+        name: "Slots",
+        provider: "DEMO",
         isActive: true,
       });
       mockPrismaService.casinoSession.create.mockResolvedValue({
-        id: 's1',
-        sessionToken: 'tok',
+        id: "s1",
+        sessionToken: "tok",
       });
 
-      const result = await service.launchGame('g1', { userId: 'u1' });
-      expect(result.gameUrl).toContain('/casino/play');
-      expect(result.mode).toBe('demo');
+      const result = await service.launchGame("g1", { userId: "u1" });
+      expect(result.gameUrl).toContain("/casino/play");
+      expect(result.mode).toBe("demo");
     });
   });
 });

@@ -1,4 +1,4 @@
-import { PrismaService } from '../src/database/prisma.service';
+import { PrismaService } from "../src/database/prisma.service";
 
 export const prismaService = new PrismaService();
 

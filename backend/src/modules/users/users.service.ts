@@ -2,12 +2,12 @@ import {
   BadRequestException,
   Injectable,
   NotFoundException,
-} from '@nestjs/common';
-import { MailService } from '../../common/services/mail.service';
-import { StorageService } from '../../common/services/storage.service';
-import { PrismaService } from '../../database/prisma.service';
-import { SubmitKycDto } from './dto/submit-kyc.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
+} from "@nestjs/common";
+import { MailService } from "../../common/services/mail.service";
+import { StorageService } from "../../common/services/storage.service";
+import { PrismaService } from "../../database/prisma.service";
+import { SubmitKycDto } from "./dto/submit-kyc.dto";
+import { UpdateUserDto } from "./dto/update-user.dto";
 
 @Injectable()
 export class UsersService {
@@ -15,7 +15,7 @@ export class UsersService {
     private prisma: PrismaService,
     private storage: StorageService,
     private mail: MailService,
-  ) { }
+  ) {}
 
   async getProfile(userId: string) {
     return this.prisma.user.findUnique({
@@ -58,11 +58,13 @@ export class UsersService {
 
   async submitKyc(userId: string, dto: SubmitKycDto) {
     const pending = await this.prisma.kyCRecord.findFirst({
-      where: { userId, status: 'PENDING' },
+      where: { userId, status: "PENDING" },
     });
 
     if (pending) {
-      throw new BadRequestException('You already have a pending KYC submission');
+      throw new BadRequestException(
+        "You already have a pending KYC submission",
+      );
     }
 
     const front = await this.storage.saveDataUrl(
@@ -78,7 +80,7 @@ export class UsersService {
         documentNumber: dto.documentNumber,
         documentFront: front.url,
         selfie: selfie.url,
-        status: 'PENDING',
+        status: "PENDING",
       },
     });
   }
@@ -86,7 +88,7 @@ export class UsersService {
   async getKycStatus(userId: string) {
     const latest = await this.prisma.kyCRecord.findFirst({
       where: { userId },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
     });
 
     const user = await this.prisma.user.findUnique({
@@ -106,14 +108,14 @@ export class UsersService {
       include: {
         account: true,
         kycRecords: true,
-        transactions: { take: 500, orderBy: { createdAt: 'desc' } },
-        sportsBets: { take: 200, orderBy: { createdAt: 'desc' } },
-        casinoSessions: { take: 100, orderBy: { startedAt: 'desc' } },
+        transactions: { take: 500, orderBy: { createdAt: "desc" } },
+        sportsBets: { take: 200, orderBy: { createdAt: "desc" } },
+        casinoSessions: { take: 100, orderBy: { startedAt: "desc" } },
       },
     });
 
     if (!user || user.deletedAt) {
-      throw new NotFoundException('User not found');
+      throw new NotFoundException("User not found");
     }
 
     const { password, mfaSecret, resetToken, ...safe } = user as any;
@@ -126,7 +128,7 @@ export class UsersService {
   async deleteMyAccount(userId: string) {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user || user.deletedAt) {
-      throw new NotFoundException('User not found');
+      throw new NotFoundException("User not found");
     }
 
     const anonymized = `deleted_${userId.slice(0, 8)}@deleted.local`;
@@ -136,8 +138,8 @@ export class UsersService {
         email: anonymized,
         username: null,
         phone: null,
-        firstName: 'Deleted',
-        lastName: 'User',
+        firstName: "Deleted",
+        lastName: "User",
         password: null,
         mfaSecret: null,
         mfaEnabled: false,
@@ -151,19 +153,19 @@ export class UsersService {
     try {
       await this.mail.sendMail({
         to: user.email,
-        subject: 'Conta excluída — SORTE AGORA',
-        html: '<p>Sua conta foi anonimizada conforme solicitação LGPD.</p>',
+        subject: "Conta excluída — SORTE AGORA",
+        html: "<p>Sua conta foi anonimizada conforme solicitação LGPD.</p>",
       });
     } catch {
       // ignore mail errors
     }
 
-    return { message: 'Account deleted and anonymized', deletedAt: new Date() };
+    return { message: "Account deleted and anonymized", deletedAt: new Date() };
   }
 
   async selfExclude(userId: string, days: number) {
     if (!days || days < 1 || days > 3650) {
-      throw new BadRequestException('days must be between 1 and 3650');
+      throw new BadRequestException("days must be between 1 and 3650");
     }
     const until = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
     await this.prisma.user.update({

@@ -14,7 +14,7 @@ export interface PixChargeResult {
 
 export interface PixWebhookPayload {
   externalId: string;
-  status: 'PAID' | 'EXPIRED' | 'CANCELLED';
+  status: "PAID" | "EXPIRED" | "CANCELLED";
   providerRef?: string;
   raw?: unknown;
 }
@@ -28,4 +28,4 @@ export interface PixProvider {
   ): PixWebhookPayload | null;
 }
 
-export const PIX_PROVIDER = Symbol('PIX_PROVIDER');
+export const PIX_PROVIDER = Symbol("PIX_PROVIDER");

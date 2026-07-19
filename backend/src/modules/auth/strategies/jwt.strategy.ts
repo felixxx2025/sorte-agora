@@ -1,11 +1,11 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { PassportStrategy } from '@nestjs/passport';
-import { Request } from 'express';
-import { ExtractJwt, Strategy } from 'passport-jwt';
+import { Injectable, UnauthorizedException } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
+import { PassportStrategy } from "@nestjs/passport";
+import { Request } from "express";
+import { ExtractJwt, Strategy } from "passport-jwt";
 
-import { TokenBlacklistService } from '../../../common/services/token-blacklist.service';
-import { PrismaService } from '../../../database/prisma.service';
+import { TokenBlacklistService } from "../../../common/services/token-blacklist.service";
+import { PrismaService } from "../../../database/prisma.service";
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -17,7 +17,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: configService.get('JWT_SECRET'),
+      secretOrKey: configService.get("JWT_SECRET"),
       passReqToCallback: true,
     });
   }
@@ -25,7 +25,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   async validate(req: Request, payload: any) {
     const token = ExtractJwt.fromAuthHeaderAsBearerToken()(req);
     if (token && (await this.tokenBlacklistService.isBlacklisted(token))) {
-      throw new UnauthorizedException('Token has been revoked');
+      throw new UnauthorizedException("Token has been revoked");
     }
 
     const user = await this.prisma.user.findUnique({

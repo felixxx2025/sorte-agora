@@ -13,6 +13,7 @@ export default function RegisterPage() {
     phone: '',
     firstName: '',
     lastName: '',
+    dateOfBirth: '',
   });
 
   const [error, setError] = useState('');
@@ -25,18 +26,23 @@ export default function RegisterPage() {
       setError('As senhas não coincidem');
       return;
     }
+    if (!formData.dateOfBirth) {
+      setError('Data de nascimento é obrigatória (18+)');
+      return;
+    }
 
     try {
       await register.mutateAsync({
         email: formData.email,
         password: formData.password,
+        dateOfBirth: formData.dateOfBirth,
         phone: formData.phone || undefined,
         firstName: formData.firstName || undefined,
         lastName: formData.lastName || undefined,
       });
       window.location.href = '/dashboard';
     } catch {
-      setError('Erro ao criar conta. Tente novamente.');
+      setError('Erro ao criar conta. Verifique os dados (idade mínima 18 anos).');
     }
   };
 
@@ -113,6 +119,18 @@ export default function RegisterPage() {
                 onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
                 className="w-full bg-[#0F0F1A] border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-[#FFD700] transition-colors"
                 placeholder="Seu sobrenome"
+              />
+            </div>
+            <div>
+              <label className="block text-gray-300 text-sm mb-2">
+                Data de nascimento (18+)
+              </label>
+              <input
+                type="date"
+                value={formData.dateOfBirth}
+                onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
+                className="w-full bg-[#0F0F1A] border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-[#FFD700] transition-colors"
+                required
               />
             </div>
             <div>

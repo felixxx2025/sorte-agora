@@ -2,19 +2,24 @@ import {
   BadRequestException,
   Injectable,
   NotFoundException,
-} from '@nestjs/common';
-import * as crypto from 'crypto';
-import { PrismaService } from '../../database/prisma.service';
-import { RegisterAffiliateDto } from './dto/register-affiliate.dto';
+} from "@nestjs/common";
+import * as crypto from "crypto";
+import { PrismaService } from "../../database/prisma.service";
+import { RegisterAffiliateDto } from "./dto/register-affiliate.dto";
 
 @Injectable()
 export class AffiliatesService {
   constructor(private prisma: PrismaService) {}
 
-  async registerAffiliate(userId: string, registerAffiliateDto: RegisterAffiliateDto) {
-    const existing = await this.prisma.affiliate.findUnique({ where: { userId } });
+  async registerAffiliate(
+    userId: string,
+    registerAffiliateDto: RegisterAffiliateDto,
+  ) {
+    const existing = await this.prisma.affiliate.findUnique({
+      where: { userId },
+    });
     if (existing) {
-      throw new BadRequestException('User is already an affiliate');
+      throw new BadRequestException("User is already an affiliate");
     }
 
     const trackingCode = this.generateTrackingCode();
@@ -33,7 +38,7 @@ export class AffiliatesService {
       data: { affiliateId: affiliate.id },
     });
 
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
 
     return {
       affiliateId: affiliate.id,
@@ -50,7 +55,7 @@ export class AffiliatesService {
     });
 
     if (!affiliate) {
-      throw new NotFoundException('Not an affiliate');
+      throw new NotFoundException("Not an affiliate");
     }
 
     const referrals = await this.prisma.user.count({
@@ -66,7 +71,7 @@ export class AffiliatesService {
     });
 
     const commissions = await this.prisma.affiliateCommission.groupBy({
-      by: ['status'],
+      by: ["status"],
       where: { affiliateId: affiliate.id },
       _sum: { amount: true },
     });
@@ -74,10 +79,9 @@ export class AffiliatesService {
     const sumBy = (status: string) =>
       Number(commissions.find((c) => c.status === status)?._sum.amount || 0);
 
-    const totalCommission =
-      sumBy('PENDING') + sumBy('PAID');
-    const pendingCommission = sumBy('PENDING');
-    const paidCommission = sumBy('PAID');
+    const totalCommission = sumBy("PENDING") + sumBy("PAID");
+    const pendingCommission = sumBy("PENDING");
+    const paidCommission = sumBy("PAID");
 
     return {
       trackingCode: affiliate.trackingCode,
@@ -98,12 +102,12 @@ export class AffiliatesService {
     });
 
     if (!affiliate) {
-      throw new NotFoundException('Not an affiliate');
+      throw new NotFoundException("Not an affiliate");
     }
 
     return this.prisma.affiliateCommission.findMany({
       where: { affiliateId: affiliate.id },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
       take: 100,
     });
   }
@@ -129,7 +133,7 @@ export class AffiliatesService {
         affiliateId: affiliate.id,
         referredUserId: params.referredUserId,
         amount: commissionAmount,
-        status: 'PENDING',
+        status: "PENDING",
         source: params.source,
         period: new Date().toISOString().slice(0, 7),
       },
@@ -137,6 +141,6 @@ export class AffiliatesService {
   }
 
   private generateTrackingCode(): string {
-    return crypto.randomBytes(4).toString('hex').toUpperCase();
+    return crypto.randomBytes(4).toString("hex").toUpperCase();
   }
 }

@@ -1,4 +1,4 @@
-import { IsNumber, Min, IsString } from 'class-validator';
+import { IsNumber, Min, IsString } from "class-validator";
 
 export class WithdrawDto {
   @IsNumber()

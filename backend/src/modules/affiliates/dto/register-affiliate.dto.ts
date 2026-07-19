@@ -1,7 +1,7 @@
-import { IsIn, IsNumber, Max, Min } from 'class-validator';
+import { IsIn, IsNumber, Max, Min } from "class-validator";
 
 export class RegisterAffiliateDto {
-  @IsIn(['CPA', 'REVSHARE', 'REVENUE_SHARE', 'HYBRID'])
+  @IsIn(["CPA", "REVSHARE", "REVENUE_SHARE", "HYBRID"])
   commissionType: string;
 
   @IsNumber()

@@ -1,19 +1,24 @@
-import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { JwtService } from '@nestjs/jwt';
-import * as bcrypt from 'bcrypt';
-import * as crypto from 'crypto';
-import * as QRCode from 'qrcode';
-import * as speakeasy from 'speakeasy';
+import {
+  BadRequestException,
+  Injectable,
+  UnauthorizedException,
+} from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
+import { JwtService } from "@nestjs/jwt";
+import * as bcrypt from "bcrypt";
+import * as crypto from "crypto";
+import * as QRCode from "qrcode";
+import * as speakeasy from "speakeasy";
 
-import { MailService } from '../../common/services/mail.service';
-import { TokenBlacklistService } from '../../common/services/token-blacklist.service';
-import { PrismaService } from '../../database/prisma.service';
-import { EnableMfaDto } from './dto/enable-mfa.dto';
-import { ForgotPasswordDto } from './dto/forgot-password.dto';
-import { RegisterDto } from './dto/register.dto';
-import { ResetPasswordDto } from './dto/reset-password.dto';
-import { VerifyMfaDto } from './dto/verify-mfa.dto';
+import { CacheService } from "../../common/services/cache.service";
+import { MailService } from "../../common/services/mail.service";
+import { TokenBlacklistService } from "../../common/services/token-blacklist.service";
+import { PrismaService } from "../../database/prisma.service";
+import { EnableMfaDto } from "./dto/enable-mfa.dto";
+import { ForgotPasswordDto } from "./dto/forgot-password.dto";
+import { RegisterDto } from "./dto/register.dto";
+import { ResetPasswordDto } from "./dto/reset-password.dto";
+import { VerifyMfaDto } from "./dto/verify-mfa.dto";
 
 @Injectable()
 export class AuthService {
@@ -23,15 +28,22 @@ export class AuthService {
     private configService: ConfigService,
     private tokenBlacklistService: TokenBlacklistService,
     private mailService: MailService,
-  ) { }
+    private cache: CacheService,
+  ) {}
 
   async register(registerDto: RegisterDto) {
+    if (registerDto.dateOfBirth) {
+      this.assertAdult(registerDto.dateOfBirth);
+    } else {
+      throw new BadRequestException("dateOfBirth is required (18+)");
+    }
+
     const existing = await this.prisma.user.findUnique({
       where: { email: registerDto.email },
     });
 
     if (existing) {
-      throw new BadRequestException('Email already registered');
+      throw new BadRequestException("Email already registered");
     }
 
     const hashedPassword = await bcrypt.hash(registerDto.password, 12);
@@ -53,6 +65,7 @@ export class AuthService {
         phone: registerDto.phone,
         firstName: registerDto.firstName,
         lastName: registerDto.lastName,
+        dateOfBirth: new Date(registerDto.dateOfBirth),
         referralCode: this.generateReferralCode(),
         referredById,
       },
@@ -61,47 +74,82 @@ export class AuthService {
         email: true,
         firstName: true,
         lastName: true,
+        mfaEnabled: true,
       },
     });
 
     await this.prisma.account.create({
       data: {
         userId: user.id,
-        currency: registerDto.currency || 'BRL',
+        currency: registerDto.currency || "BRL",
       },
     });
 
-    const tokens = await this.login(user);
+    const tokens = await this.issueTokens(user);
 
     return {
       ...tokens,
-      message: 'Registration successful',
+      message: "Registration successful",
     };
   }
 
   async login(user: any) {
-    const payload = { sub: user.id, email: user.email };
+    this.assertAccountUsable(user);
 
-    const accessToken = this.jwtService.sign(payload);
-    const refreshToken = this.jwtService.sign(payload, {
-      expiresIn: this.configService.get('JWT_REFRESH_EXPIRES_IN') || '7d',
+    if (user.mfaEnabled) {
+      const mfaToken = this.jwtService.sign(
+        { sub: user.id, email: user.email, purpose: "mfa" },
+        { expiresIn: "5m" },
+      );
+      return {
+        mfaRequired: true,
+        mfaToken,
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+        },
+      };
+    }
+
+    return this.issueTokens(user);
+  }
+
+  async completeMfaLogin(mfaToken: string, totp: string) {
+    let payload: any;
+    try {
+      payload = this.jwtService.verify(mfaToken);
+    } catch {
+      throw new UnauthorizedException("Invalid or expired MFA token");
+    }
+
+    if (payload.purpose !== "mfa") {
+      throw new UnauthorizedException("Invalid MFA token purpose");
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: payload.sub },
     });
 
-    await this.prisma.user.update({
-      where: { id: user.id },
-      data: { lastLoginAt: new Date() },
+    if (!user || !user.mfaEnabled || !user.mfaSecret) {
+      throw new UnauthorizedException("MFA not enabled");
+    }
+
+    this.assertAccountUsable(user);
+
+    const isValid = speakeasy.totp.verify({
+      secret: user.mfaSecret,
+      encoding: "base32",
+      token: totp,
+      window: 1,
     });
 
-    return {
-      accessToken,
-      refreshToken,
-      user: {
-        id: user.id,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-      },
-    };
+    if (!isValid) {
+      throw new BadRequestException("Invalid MFA code");
+    }
+
+    return this.issueTokens(user);
   }
 
   async validateUser(email: string, password: string): Promise<any> {
@@ -119,9 +167,7 @@ export class AuthService {
       return null;
     }
 
-    if (!user.isActive || user.isBanned) {
-      throw new UnauthorizedException('Account is inactive or banned');
-    }
+    this.assertAccountUsable(user);
 
     const { password: _, ...result } = user;
     return result;
@@ -129,27 +175,29 @@ export class AuthService {
 
   async refresh(refreshToken: string) {
     if (!refreshToken) {
-      throw new UnauthorizedException('Refresh token required');
+      throw new UnauthorizedException("Refresh token required");
     }
 
     if (await this.tokenBlacklistService.isBlacklisted(refreshToken)) {
-      throw new UnauthorizedException('Token has been revoked');
+      throw new UnauthorizedException("Token has been revoked");
     }
 
     let payload: any;
     try {
       payload = this.jwtService.verify(refreshToken);
     } catch {
-      throw new UnauthorizedException('Invalid or expired refresh token');
+      throw new UnauthorizedException("Invalid or expired refresh token");
     }
 
     const user = await this.prisma.user.findUnique({
       where: { id: payload.sub },
     });
 
-    if (!user || !user.isActive || user.isBanned) {
-      throw new UnauthorizedException('User not found or inactive');
+    if (!user) {
+      throw new UnauthorizedException("User not found or inactive");
     }
+
+    this.assertAccountUsable(user);
 
     const accessToken = this.jwtService.sign({
       sub: user.id,
@@ -162,12 +210,12 @@ export class AuthService {
   async logout(user: any, token: string) {
     if (token) {
       const expiresIn = this.parseExpirySeconds(
-        this.configService.get('JWT_EXPIRES_IN') || '15m',
+        this.configService.get("JWT_EXPIRES_IN") || "15m",
       );
       await this.tokenBlacklistService.addToBlacklist(token, expiresIn);
     }
 
-    return { message: 'Logout successful' };
+    return { message: "Logout successful" };
   }
 
   async enableMfa(userId: string, enableMfaDto: EnableMfaDto) {
@@ -176,36 +224,42 @@ export class AuthService {
     });
 
     if (!user) {
-      throw new UnauthorizedException('User not found');
+      throw new UnauthorizedException("User not found");
     }
 
     if (user.mfaEnabled) {
-      throw new BadRequestException('MFA is already enabled');
+      throw new BadRequestException("MFA is already enabled");
     }
 
-    const secret = speakeasy.generateSecret({
-      name: `SORTE AGORA (${user.email})`,
-    });
+    const pending = await this.cache.getJson<{ secret: string }>(
+      `mfa:pending:${userId}`,
+    );
+    if (!pending?.secret) {
+      throw new BadRequestException("Generate MFA secret first");
+    }
 
     const isValid = speakeasy.totp.verify({
-      secret: secret.base32,
-      encoding: 'base32',
+      secret: pending.secret,
+      encoding: "base32",
       token: enableMfaDto.token,
+      window: 1,
     });
 
     if (!isValid) {
-      throw new BadRequestException('Invalid token');
+      throw new BadRequestException("Invalid token");
     }
 
     await this.prisma.user.update({
       where: { id: userId },
       data: {
         mfaEnabled: true,
-        mfaSecret: secret.base32,
+        mfaSecret: pending.secret,
       },
     });
 
-    return { message: 'MFA enabled successfully' };
+    await this.cache.del(`mfa:pending:${userId}`);
+
+    return { message: "MFA enabled successfully" };
   }
 
   async disableMfa(userId: string, verifyMfaDto: VerifyMfaDto) {
@@ -214,21 +268,22 @@ export class AuthService {
     });
 
     if (!user) {
-      throw new UnauthorizedException('User not found');
+      throw new UnauthorizedException("User not found");
     }
 
     if (!user.mfaEnabled) {
-      throw new BadRequestException('MFA is not enabled');
+      throw new BadRequestException("MFA is not enabled");
     }
 
     const isValid = speakeasy.totp.verify({
       secret: user.mfaSecret,
-      encoding: 'base32',
+      encoding: "base32",
       token: verifyMfaDto.token,
+      window: 1,
     });
 
     if (!isValid) {
-      throw new BadRequestException('Invalid token');
+      throw new BadRequestException("Invalid token");
     }
 
     await this.prisma.user.update({
@@ -239,7 +294,7 @@ export class AuthService {
       },
     });
 
-    return { message: 'MFA disabled successfully' };
+    return { message: "MFA disabled successfully" };
   }
 
   async generateMfaSecret(userId: string) {
@@ -248,18 +303,24 @@ export class AuthService {
     });
 
     if (!user) {
-      throw new UnauthorizedException('User not found');
+      throw new UnauthorizedException("User not found");
     }
 
     if (user.mfaEnabled) {
-      throw new BadRequestException('MFA is already enabled');
+      throw new BadRequestException("MFA is already enabled");
     }
 
     const secret = speakeasy.generateSecret({
       name: `SORTE AGORA (${user.email})`,
     });
 
-    const qrCodeUrl = await QRCode.toDataURL(secret.otpauth_url);
+    await this.cache.setJson(
+      `mfa:pending:${userId}`,
+      { secret: secret.base32 },
+      600,
+    );
+
+    const qrCodeUrl = await QRCode.toDataURL(secret.otpauth_url!);
 
     return {
       secret: secret.base32,
@@ -273,17 +334,18 @@ export class AuthService {
     });
 
     if (!user || !user.mfaEnabled) {
-      throw new UnauthorizedException('MFA not enabled');
+      throw new UnauthorizedException("MFA not enabled");
     }
 
     const isValid = speakeasy.totp.verify({
       secret: user.mfaSecret,
-      encoding: 'base32',
+      encoding: "base32",
       token: verifyMfaDto.token,
+      window: 1,
     });
 
     if (!isValid) {
-      throw new BadRequestException('Invalid token');
+      throw new BadRequestException("Invalid token");
     }
 
     return { valid: true };
@@ -295,7 +357,7 @@ export class AuthService {
     });
 
     if (!user) {
-      return { message: 'If the email exists, a reset link has been sent' };
+      return { message: "If the email exists, a reset link has been sent" };
     }
 
     const resetToken = this.generateResetToken();
@@ -309,14 +371,15 @@ export class AuthService {
       },
     });
 
-    const frontendUrl = this.configService.get('FRONTEND_URL') || 'http://localhost:3000';
+    const frontendUrl =
+      this.configService.get("FRONTEND_URL") || "http://localhost:3000";
     const resetUrl = `${frontendUrl}/reset-password?token=${resetToken}`;
 
     await this.mailService.sendPasswordReset(user.email, resetUrl);
 
     return {
-      message: 'If the email exists, a reset link has been sent',
-      ...(this.configService.get('NODE_ENV') !== 'production'
+      message: "If the email exists, a reset link has been sent",
+      ...(this.configService.get("NODE_ENV") !== "production"
         ? { resetToken, resetUrl }
         : {}),
     };
@@ -333,7 +396,7 @@ export class AuthService {
     });
 
     if (!user) {
-      throw new BadRequestException('Invalid or expired reset token');
+      throw new BadRequestException("Invalid or expired reset token");
     }
 
     const hashedPassword = await bcrypt.hash(resetPasswordDto.newPassword, 12);
@@ -347,15 +410,76 @@ export class AuthService {
       },
     });
 
-    return { message: 'Password reset successfully' };
+    return { message: "Password reset successfully" };
+  }
+
+  private async issueTokens(user: {
+    id: string;
+    email: string;
+    firstName?: string | null;
+    lastName?: string | null;
+  }) {
+    const payload = { sub: user.id, email: user.email };
+
+    const accessToken = this.jwtService.sign(payload);
+    const refreshToken = this.jwtService.sign(payload, {
+      expiresIn: this.configService.get("JWT_REFRESH_EXPIRES_IN") || "7d",
+    });
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { lastLoginAt: new Date() },
+    });
+
+    return {
+      accessToken,
+      refreshToken,
+      mfaRequired: false,
+      user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+      },
+    };
+  }
+
+  private assertAccountUsable(user: {
+    isActive?: boolean;
+    isBanned?: boolean;
+    deletedAt?: Date | null;
+    selfExcludedUntil?: Date | null;
+  }) {
+    if (!user.isActive || user.isBanned || user.deletedAt) {
+      throw new UnauthorizedException("Account is inactive or banned");
+    }
+    if (user.selfExcludedUntil && user.selfExcludedUntil > new Date()) {
+      throw new UnauthorizedException("Self-exclusion active");
+    }
+  }
+
+  private assertAdult(dateOfBirth: string) {
+    const dob = new Date(dateOfBirth);
+    if (Number.isNaN(dob.getTime())) {
+      throw new BadRequestException("Invalid dateOfBirth");
+    }
+    const now = new Date();
+    let age = now.getFullYear() - dob.getFullYear();
+    const m = now.getMonth() - dob.getMonth();
+    if (m < 0 || (m === 0 && now.getDate() < dob.getDate())) {
+      age -= 1;
+    }
+    if (age < 18) {
+      throw new BadRequestException("You must be 18 or older");
+    }
   }
 
   private generateReferralCode(): string {
-    return crypto.randomBytes(4).toString('hex').toUpperCase();
+    return crypto.randomBytes(4).toString("hex").toUpperCase();
   }
 
   private generateResetToken(): string {
-    return crypto.randomBytes(32).toString('hex');
+    return crypto.randomBytes(32).toString("hex");
   }
 
   private parseExpirySeconds(expiresIn: string): number {

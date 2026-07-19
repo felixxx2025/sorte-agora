@@ -1,5 +1,5 @@
-import * as Sentry from '@sentry/node';
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import * as Sentry from "@sentry/node";
+import { Injectable, OnModuleInit } from "@nestjs/common";
 
 @Injectable()
 export class SentryService implements OnModuleInit {
@@ -7,8 +7,8 @@ export class SentryService implements OnModuleInit {
     if (process.env.SENTRY_DSN) {
       Sentry.init({
         dsn: process.env.SENTRY_DSN,
-        environment: process.env.NODE_ENV || 'development',
-        tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
+        environment: process.env.NODE_ENV || "development",
+        tracesSampleRate: process.env.NODE_ENV === "production" ? 0.1 : 1.0,
         beforeSend(event, hint) {
           // Filtra informações sensíveis
           if (event.request) {
@@ -27,7 +27,10 @@ export class SentryService implements OnModuleInit {
     });
   }
 
-  captureMessage(message: string, level: 'info' | 'warning' | 'error' = 'info') {
+  captureMessage(
+    message: string,
+    level: "info" | "warning" | "error" = "info",
+  ) {
     Sentry.captureMessage(message, {
       level,
     });

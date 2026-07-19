@@ -1,8 +1,8 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { PrismaService } from '../../database/prisma.service';
-import { VipService } from './vip.service';
+import { Test, TestingModule } from "@nestjs/testing";
+import { PrismaService } from "../../database/prisma.service";
+import { VipService } from "./vip.service";
 
-describe('VipService', () => {
+describe("VipService", () => {
   let service: VipService;
 
   const mockPrismaService = {
@@ -37,48 +37,48 @@ describe('VipService', () => {
     jest.clearAllMocks();
   });
 
-  it('should be defined', () => {
+  it("should be defined", () => {
     expect(service).toBeDefined();
   });
 
-  describe('getVipStatus', () => {
-    it('should return VIP status for user', async () => {
+  describe("getVipStatus", () => {
+    it("should return VIP status for user", async () => {
       mockPrismaService.user.findUnique.mockResolvedValue({
-        id: '1',
+        id: "1",
         vipPoints: 500,
-        vipLevelId: 'level1',
-        vipLevel: { id: 'level1', name: 'Bronze', level: 1, pointsRequired: 0 },
+        vipLevelId: "level1",
+        vipLevel: { id: "level1", name: "Bronze", level: 1, pointsRequired: 0 },
       });
       mockPrismaService.vipLevel.findFirst.mockResolvedValue({
-        id: 'level2',
-        name: 'Prata',
+        id: "level2",
+        name: "Prata",
         level: 2,
         pointsRequired: 1000,
       });
 
-      const result = await service.getVipStatus('1');
-      expect(result.level.name).toBe('Bronze');
+      const result = await service.getVipStatus("1");
+      expect(result.level.name).toBe("Bronze");
       expect(result.points).toBe(500);
     });
   });
 
-  describe('getVipLevels', () => {
-    it('should return levels', async () => {
+  describe("getVipLevels", () => {
+    it("should return levels", async () => {
       mockPrismaService.vipLevel.findMany.mockResolvedValue([{ level: 1 }]);
       const result = await service.getVipLevels();
       expect(result).toHaveLength(1);
     });
   });
 
-  describe('getMissions', () => {
-    it('should return missions with progress', async () => {
+  describe("getMissions", () => {
+    it("should return missions with progress", async () => {
       mockPrismaService.vipMission.findMany.mockResolvedValue([
         {
-          id: 'm1',
-          code: 'daily-bets-10',
-          title: 'Faça 10 apostas',
-          description: 'desc',
-          type: 'DAILY',
+          id: "m1",
+          code: "daily-bets-10",
+          title: "Faça 10 apostas",
+          description: "desc",
+          type: "DAILY",
           target: 10,
           rewardPoints: 50,
         },
@@ -88,7 +88,7 @@ describe('VipService', () => {
         completed: false,
       });
 
-      const result = await service.getMissions('u1');
+      const result = await service.getMissions("u1");
       expect(result.daily).toHaveLength(1);
       expect(result.daily[0].progress).toBe(3);
     });

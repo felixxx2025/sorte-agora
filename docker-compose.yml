@@ -45,13 +45,15 @@ services:
       PORT: 3001
       DATABASE_URL: postgresql://sorteagora:${DB_PASSWORD:-sorteagora123}@postgres:5432/sorte_agora?schema=public
       REDIS_URL: redis://redis:6379
-      JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-key-change-in-production}
+      # Sem defaults fracos: defina JWT_SECRET e ENCRYPTION_KEY (≥32 chars) no .env
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env (min 32 chars)}
       JWT_EXPIRES_IN: 15m
       JWT_REFRESH_EXPIRES_IN: 7d
-      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-your-32-byte-hex-key-change-in-production}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?Set ENCRYPTION_KEY in .env (min 32 chars)}
+      REQUIRE_STRONG_SECRETS: "true"
       CORS_ORIGIN: http://localhost:8080
       JAEGER_ENDPOINT: http://jaeger:4318/v1/traces
-      PIX_AUTO_CONFIRM: "true"
+      PIX_AUTO_CONFIRM: ${PIX_AUTO_CONFIRM:-false}
     ports:
       - "3001:3001"
     depends_on:

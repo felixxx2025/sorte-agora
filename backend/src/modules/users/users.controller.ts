@@ -1,46 +1,57 @@
-import { Body, Controller, Delete, Get, Post, Put, UseGuards } from '@nestjs/common';
-import { JwtAuthGuard } from '../../common/guards/auth.guard';
-import { CurrentUser } from '../../common/decorators/user.decorator';
-import { UsersService } from './users.service';
-import { SubmitKycDto } from './dto/submit-kyc.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Post,
+  Put,
+  UseGuards,
+} from "@nestjs/common";
+import { JwtAuthGuard } from "../../common/guards/auth.guard";
+import { CurrentUser } from "../../common/decorators/user.decorator";
+import { UsersService } from "./users.service";
+import { SubmitKycDto } from "./dto/submit-kyc.dto";
+import { UpdateUserDto } from "./dto/update-user.dto";
 
-@Controller('users')
+@Controller("users")
 @UseGuards(JwtAuthGuard)
 export class UsersController {
   constructor(private usersService: UsersService) {}
 
-  @Get('profile')
+  @Get("profile")
   getProfile(@CurrentUser() user: any) {
     return this.usersService.getProfile(user.id);
   }
 
-  @Put('profile')
-  updateProfile(@CurrentUser() user: any, @Body() updateUserDto: UpdateUserDto) {
+  @Put("profile")
+  updateProfile(
+    @CurrentUser() user: any,
+    @Body() updateUserDto: UpdateUserDto,
+  ) {
     return this.usersService.updateProfile(user.id, updateUserDto);
   }
 
-  @Post('kyc')
+  @Post("kyc")
   submitKyc(@CurrentUser() user: any, @Body() dto: SubmitKycDto) {
     return this.usersService.submitKyc(user.id, dto);
   }
 
-  @Get('kyc')
+  @Get("kyc")
   getKycStatus(@CurrentUser() user: any) {
     return this.usersService.getKycStatus(user.id);
   }
 
-  @Get('me/export')
+  @Get("me/export")
   exportMyData(@CurrentUser() user: any) {
     return this.usersService.exportMyData(user.id);
   }
 
-  @Delete('me')
+  @Delete("me")
   deleteMyAccount(@CurrentUser() user: any) {
     return this.usersService.deleteMyAccount(user.id);
   }
 
-  @Post('me/self-exclude')
+  @Post("me/self-exclude")
   selfExclude(@CurrentUser() user: any, @Body() body: { days: number }) {
     return this.usersService.selfExclude(user.id, Number(body.days));
   }

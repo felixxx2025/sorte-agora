@@ -1,29 +1,37 @@
-import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
-import { CurrentUser } from '../../common/decorators/user.decorator';
-import { Public } from '../../common/decorators/public.decorator';
-import { JwtAuthGuard } from '../../common/guards/auth.guard';
-import { CasinoService } from './casino.service';
-import { LaunchGameDto } from './dto/launch-game.dto';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Query,
+  UseGuards,
+} from "@nestjs/common";
+import { CurrentUser } from "../../common/decorators/user.decorator";
+import { Public } from "../../common/decorators/public.decorator";
+import { JwtAuthGuard } from "../../common/guards/auth.guard";
+import { CasinoService } from "./casino.service";
+import { LaunchGameDto } from "./dto/launch-game.dto";
 
-@Controller('casino')
+@Controller("casino")
 @UseGuards(JwtAuthGuard)
 export class CasinoController {
-  constructor(private casinoService: CasinoService) { }
+  constructor(private casinoService: CasinoService) {}
 
   @Public()
-  @Get('games')
-  getGames(@Query('category') category?: string) {
+  @Get("games")
+  getGames(@Query("category") category?: string) {
     return this.casinoService.getGames(category);
   }
 
-  @Get('games/:id')
-  getGame(@Param('id') id: string) {
+  @Get("games/:id")
+  getGame(@Param("id") id: string) {
     return this.casinoService.getGame(id);
   }
 
-  @Post('games/:id/launch')
+  @Post("games/:id/launch")
   launchGame(
-    @Param('id') id: string,
+    @Param("id") id: string,
     @CurrentUser() user: any,
     @Body() launchGameDto: LaunchGameDto,
   ) {
@@ -33,7 +41,7 @@ export class CasinoController {
     } as any);
   }
 
-  @Get('sessions')
+  @Get("sessions")
   getSessions(@CurrentUser() user: any) {
     return this.casinoService.getSessions(user.id);
   }

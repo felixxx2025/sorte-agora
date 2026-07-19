@@ -1,5 +1,6 @@
 export {
   useLogin,
+  useCompleteMfaLogin,
   useRegister,
   useLogout,
   useProfile,

@@ -1,4 +1,4 @@
-import { IsNumber, IsOptional, Min } from 'class-validator';
+import { IsNumber, IsOptional, Min } from "class-validator";
 
 export class LaunchGameDto {
   @IsOptional()

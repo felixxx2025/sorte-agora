@@ -52,7 +52,9 @@ function PlayContent() {
             />
             <div className="relative z-10 space-y-2">
               <p className="text-[#FFD700] text-lg font-semibold">Modo demo</p>
-              <p className="text-gray-400 text-sm">Provedor live na Fase B</p>
+              <p className="text-gray-400 text-sm">
+                Sessão demo — provedor live quando CASINO_PROVIDER=live
+              </p>
               <p className="text-xs text-gray-500 font-mono">
                 token {(token || '—').slice(0, 20)}
                 {token.length > 20 ? '…' : ''}

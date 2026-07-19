@@ -1,5 +1,24 @@
 # Changelog
 
+## [1.4.0-faseD1] — 2026-07-19
+
+### Added
+- MFA no fluxo de login (`mfaRequired` + `POST /auth/mfa/login`)
+- Age gate: `dateOfBirth` obrigatório no registro (18+)
+- Páginas `/responsible` e `/support`
+- ESLint backend (`.eslintrc.js`); CI audit falha em critical
+- Smoke security: 429 (throttler) + shape MFA
+
+### Fixed / Hardened
+- `enableMfa` valida TOTP contra secret pendente (Redis)
+- `ThrottlerGuard` + `JwtAuthGuard` como `APP_GUARD`
+- Compose sem defaults JWT/ENCRYPTION fracos; `PIX_AUTO_CONFIRM` default false
+- Autoexclusão / ban / inactive bloqueiam login
+- Next.js 14.1.0 → 14.2.35; static `/uploads/`; Sentry em 500
+
+### Status
+Maturidade ~91/100 — endurecimento de auth/secrets; PIX/provider real na D2.
+
 ## [1.3.0-faseC] — 2026-07-19
 
 ### Added

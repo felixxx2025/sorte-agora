@@ -1,5 +1,5 @@
-import { Module } from '@nestjs/common';
-import { SentryService } from './sentry.service';
+import { Module } from "@nestjs/common";
+import { SentryService } from "./sentry.service";
 
 @Module({
   providers: [SentryService],

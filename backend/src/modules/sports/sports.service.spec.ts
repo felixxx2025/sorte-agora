@@ -1,11 +1,11 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { CacheService } from '../../common/services/cache.service';
-import { PrismaService } from '../../database/prisma.service';
-import { AffiliatesService } from '../affiliates/affiliates.service';
-import { VipService } from '../vip/vip.service';
-import { SportsService } from './sports.service';
+import { Test, TestingModule } from "@nestjs/testing";
+import { CacheService } from "../../common/services/cache.service";
+import { PrismaService } from "../../database/prisma.service";
+import { AffiliatesService } from "../affiliates/affiliates.service";
+import { VipService } from "../vip/vip.service";
+import { SportsService } from "./sports.service";
 
-describe('SportsService', () => {
+describe("SportsService", () => {
   let service: SportsService;
 
   const mockPrismaService = {
@@ -70,54 +70,60 @@ describe('SportsService', () => {
     });
   });
 
-  it('should be defined', () => {
+  it("should be defined", () => {
     expect(service).toBeDefined();
   });
 
-  describe('getEvents', () => {
-    it('should return events', async () => {
-      mockPrismaService.sportsEvent.findMany.mockResolvedValue([{ id: '1' }]);
+  describe("getEvents", () => {
+    it("should return events", async () => {
+      mockPrismaService.sportsEvent.findMany.mockResolvedValue([{ id: "1" }]);
       const result = await service.getEvents(false);
       expect(result).toHaveLength(1);
       expect(mockCacheService.setJson).toHaveBeenCalled();
     });
   });
 
-  describe('settleBet', () => {
-    it('should settle lost bet', async () => {
+  describe("settleBet", () => {
+    it("should settle lost bet", async () => {
       mockPrismaService.sportsBet.findUnique.mockResolvedValue({
-        id: 'b1',
-        status: 'PENDING',
+        id: "b1",
+        status: "PENDING",
         stake: 10,
         odds: 2,
-        userId: 'u1',
+        userId: "u1",
       });
       mockPrismaService.sportsBet.update.mockResolvedValue({
-        id: 'b1',
-        status: 'LOST',
+        id: "b1",
+        status: "LOST",
       });
 
-      const result = await service.settleBet('b1', 'LOST');
-      expect(result.status).toBe('LOST');
+      const result = await service.settleBet("b1", "LOST");
+      expect(result.status).toBe("LOST");
       expect(mockAffiliatesService.recordCommission).not.toHaveBeenCalled();
     });
 
-    it('should credit payout and record BET commission on WON', async () => {
+    it("should credit payout and record BET commission on WON", async () => {
       mockPrismaService.sportsBet.findUnique.mockResolvedValue({
-        id: 'b1',
-        status: 'PENDING',
+        id: "b1",
+        status: "PENDING",
         stake: 10,
         odds: 2,
-        userId: 'u1',
+        userId: "u1",
       });
-      mockPrismaService.user.findUnique.mockResolvedValue({ referredById: 'aff1' });
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        referredById: "aff1",
+      });
       mockPrismaService.$transaction.mockImplementation(async (cb) =>
         cb({
           sportsBet: {
-            update: jest.fn().mockResolvedValue({ id: 'b1', status: 'WON', payout: 20 }),
+            update: jest
+              .fn()
+              .mockResolvedValue({ id: "b1", status: "WON", payout: 20 }),
           },
           account: {
-            findUnique: jest.fn().mockResolvedValue({ id: 'acc1', userId: 'u1' }),
+            findUnique: jest
+              .fn()
+              .mockResolvedValue({ id: "acc1", userId: "u1" }),
             update: jest.fn(),
           },
           transaction: {
@@ -126,13 +132,13 @@ describe('SportsService', () => {
         }),
       );
 
-      const result = await service.settleBet('b1', 'WON');
-      expect(result.status).toBe('WON');
+      const result = await service.settleBet("b1", "WON");
+      expect(result.status).toBe("WON");
       expect(mockAffiliatesService.recordCommission).toHaveBeenCalledWith({
-        affiliateUserId: 'aff1',
-        referredUserId: 'u1',
+        affiliateUserId: "aff1",
+        referredUserId: "u1",
         amount: 20,
-        source: 'BET',
+        source: "BET",
       });
     });
   });

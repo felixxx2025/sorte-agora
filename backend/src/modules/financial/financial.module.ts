@@ -1,11 +1,11 @@
-import { Module } from '@nestjs/common';
-import { ConfigModule, ConfigService } from '@nestjs/config';
-import { AffiliatesModule } from '../affiliates/affiliates.module';
-import { FinancialController } from './financial.controller';
-import { FinancialService } from './financial.service';
-import { PIX_PROVIDER } from './providers/pix-provider.interface';
-import { SandboxPixProvider } from './providers/sandbox-pix.provider';
-import { WebhooksController } from './webhooks.controller';
+import { Module } from "@nestjs/common";
+import { ConfigModule, ConfigService } from "@nestjs/config";
+import { AffiliatesModule } from "../affiliates/affiliates.module";
+import { FinancialController } from "./financial.controller";
+import { FinancialService } from "./financial.service";
+import { PIX_PROVIDER } from "./providers/pix-provider.interface";
+import { SandboxPixProvider } from "./providers/sandbox-pix.provider";
+import { WebhooksController } from "./webhooks.controller";
 
 @Module({
   imports: [ConfigModule, AffiliatesModule],

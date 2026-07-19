@@ -1,9 +1,9 @@
-import { Inject, Injectable } from '@nestjs/common';
-import Redis from 'ioredis';
+import { Inject, Injectable } from "@nestjs/common";
+import Redis from "ioredis";
 
 @Injectable()
 export class CacheService {
-  constructor(@Inject('REDIS_CLIENT') private readonly redis: Redis) {}
+  constructor(@Inject("REDIS_CLIENT") private readonly redis: Redis) {}
 
   async getJson<T>(key: string): Promise<T | null> {
     const raw = await this.redis.get(key);

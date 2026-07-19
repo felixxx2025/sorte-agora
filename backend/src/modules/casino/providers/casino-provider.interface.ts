@@ -19,4 +19,4 @@ export interface CasinoProvider {
   launch(request: CasinoLaunchRequest): Promise<CasinoLaunchResult>;
 }
 
-export const CASINO_PROVIDER = Symbol('CASINO_PROVIDER');
+export const CASINO_PROVIDER = Symbol("CASINO_PROVIDER");

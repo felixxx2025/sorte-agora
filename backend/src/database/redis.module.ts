@@ -1,17 +1,17 @@
-import { Module, Global } from '@nestjs/common';
-import Redis from 'ioredis';
+import { Module, Global } from "@nestjs/common";
+import Redis from "ioredis";
 
 @Global()
 @Module({
   providers: [
     {
-      provide: 'REDIS_CLIENT',
+      provide: "REDIS_CLIENT",
       useFactory: () => {
-        const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
+        const redisUrl = process.env.REDIS_URL || "redis://localhost:6379";
         return new Redis(redisUrl);
       },
     },
   ],
-  exports: ['REDIS_CLIENT'],
+  exports: ["REDIS_CLIENT"],
 })
 export class RedisModule {}

@@ -1,15 +1,15 @@
-import { ConfigService } from '@nestjs/config';
-import { Test, TestingModule } from '@nestjs/testing';
-import { TokenBlacklistService } from '../../../common/services/token-blacklist.service';
-import { PrismaService } from '../../../database/prisma.service';
-import { JwtStrategy } from './jwt.strategy';
+import { ConfigService } from "@nestjs/config";
+import { Test, TestingModule } from "@nestjs/testing";
+import { TokenBlacklistService } from "../../../common/services/token-blacklist.service";
+import { PrismaService } from "../../../database/prisma.service";
+import { JwtStrategy } from "./jwt.strategy";
 
-describe('JwtStrategy', () => {
+describe("JwtStrategy", () => {
   let strategy: JwtStrategy;
 
   const mockConfigService = {
     get: jest.fn((key: string) => {
-      if (key === 'JWT_SECRET') return 'test-secret';
+      if (key === "JWT_SECRET") return "test-secret";
       return null;
     }),
   };
@@ -26,7 +26,7 @@ describe('JwtStrategy', () => {
   };
 
   const mockReq = {
-    headers: { authorization: 'Bearer mock-token' },
+    headers: { authorization: "Bearer mock-token" },
   } as any;
 
   beforeEach(async () => {
@@ -53,17 +53,17 @@ describe('JwtStrategy', () => {
     mockTokenBlacklistService.isBlacklisted.mockResolvedValue(false);
   });
 
-  it('should be defined', () => {
+  it("should be defined", () => {
     expect(strategy).toBeDefined();
   });
 
-  describe('validate', () => {
-    it('should validate JWT payload', async () => {
-      const payload = { sub: 'user1', email: 'test@example.com' };
+  describe("validate", () => {
+    it("should validate JWT payload", async () => {
+      const payload = { sub: "user1", email: "test@example.com" };
 
       const mockUser = {
-        id: 'user1',
-        email: 'test@example.com',
+        id: "user1",
+        email: "test@example.com",
         isActive: true,
         isBanned: false,
         account: { balance: 1000 },
@@ -74,16 +74,16 @@ describe('JwtStrategy', () => {
       const result = await strategy.validate(mockReq, payload);
 
       expect(result).toBeDefined();
-      expect(result.id).toBe('user1');
-      expect(result.email).toBe('test@example.com');
+      expect(result.id).toBe("user1");
+      expect(result.email).toBe("test@example.com");
     });
 
-    it('should throw UnauthorizedException for inactive user', async () => {
-      const payload = { sub: 'user1', email: 'test@example.com' };
+    it("should throw UnauthorizedException for inactive user", async () => {
+      const payload = { sub: "user1", email: "test@example.com" };
 
       const mockUser = {
-        id: 'user1',
-        email: 'test@example.com',
+        id: "user1",
+        email: "test@example.com",
         isActive: false,
         isBanned: false,
       };
@@ -93,12 +93,12 @@ describe('JwtStrategy', () => {
       await expect(strategy.validate(mockReq, payload)).rejects.toThrow();
     });
 
-    it('should throw UnauthorizedException for banned user', async () => {
-      const payload = { sub: 'user1', email: 'test@example.com' };
+    it("should throw UnauthorizedException for banned user", async () => {
+      const payload = { sub: "user1", email: "test@example.com" };
 
       const mockUser = {
-        id: 'user1',
-        email: 'test@example.com',
+        id: "user1",
+        email: "test@example.com",
         isActive: true,
         isBanned: true,
       };
@@ -108,10 +108,10 @@ describe('JwtStrategy', () => {
       await expect(strategy.validate(mockReq, payload)).rejects.toThrow();
     });
 
-    it('should throw for blacklisted token', async () => {
+    it("should throw for blacklisted token", async () => {
       mockTokenBlacklistService.isBlacklisted.mockResolvedValue(true);
       await expect(
-        strategy.validate(mockReq, { sub: 'user1' }),
+        strategy.validate(mockReq, { sub: "user1" }),
       ).rejects.toThrow();
     });
   });

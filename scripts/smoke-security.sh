@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Security smoke — Fase C
+# Security smoke — Fase D1
 # Uso: ./scripts/smoke-security.sh
 
 set -euo pipefail
@@ -30,6 +30,10 @@ CODE=$(curl -s -o /dev/null -w '%{http_code}' "$BASE/admin/dashboard" \
   -H "Authorization: Bearer $TOKEN")
 [ "$CODE" = "403" ] && pass "user em admin = 403" || fail "user admin ($CODE)"
 
+# MFA challenge shape (usuário sem MFA → tokens; com MFA → mfaRequired)
+MFA_SHAPE=$(echo "$LOGIN" | python3 -c "import sys,json; d=json.load(sys.stdin); x=d.get('data',d); print('mfa' if x.get('mfaRequired') else ('ok' if x.get('accessToken') else 'bad'))")
+[ "$MFA_SHAPE" = "ok" ] || [ "$MFA_SHAPE" = "mfa" ] && pass "login shape MFA/tokens ($MFA_SHAPE)" || fail "login shape inválido"
+
 # Webhook público existe (não 401)
 CODE=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$BASE/webhooks/pix" \
   -H 'Content-Type: application/json' -d '{}')
@@ -51,5 +55,15 @@ if [ -n "${REFRESH:-}" ]; then
     *) echo "WARN logout blacklist ($CODE) — pode variar por implementação" ;;
   esac
 fi
+
+# Rate limit por último (esgota o bucket do login e não afeta checks acima / E2E logo após)
+HIT_429=0
+for i in $(seq 1 40); do
+  C=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$BASE/auth/login" \
+    -H 'Content-Type: application/json' \
+    -d '{"email":"rate@limit.test","password":"wrong"}')
+  if [ "$C" = "429" ]; then HIT_429=1; break; fi
+done
+[ "$HIT_429" = "1" ] && pass "throttler login = 429" || echo "WARN throttler 429 não observado (limites podem ser altos)"
 
 echo "SECURITY SMOKE OK"

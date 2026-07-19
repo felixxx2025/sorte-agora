@@ -1,41 +1,41 @@
-import { Controller, Get, Param, Post, Body, UseGuards } from '@nestjs/common';
-import { JwtAuthGuard } from '../../common/guards/auth.guard';
-import { CurrentUser } from '../../common/decorators/user.decorator';
-import { FinancialService } from './financial.service';
-import { DepositDto } from './dto/deposit.dto';
-import { WithdrawDto } from './dto/withdraw.dto';
+import { Controller, Get, Param, Post, Body, UseGuards } from "@nestjs/common";
+import { JwtAuthGuard } from "../../common/guards/auth.guard";
+import { CurrentUser } from "../../common/decorators/user.decorator";
+import { FinancialService } from "./financial.service";
+import { DepositDto } from "./dto/deposit.dto";
+import { WithdrawDto } from "./dto/withdraw.dto";
 
-@Controller('financial')
+@Controller("financial")
 @UseGuards(JwtAuthGuard)
 export class FinancialController {
   constructor(private financialService: FinancialService) {}
 
-  @Get('balance')
+  @Get("balance")
   getBalance(@CurrentUser() user: any) {
     return this.financialService.getBalance(user.id);
   }
 
-  @Post('deposit')
+  @Post("deposit")
   createDeposit(@CurrentUser() user: any, @Body() depositDto: DepositDto) {
     return this.financialService.createDeposit(user.id, depositDto);
   }
 
-  @Get('deposit/:id')
-  getDepositStatus(@CurrentUser() user: any, @Param('id') id: string) {
+  @Get("deposit/:id")
+  getDepositStatus(@CurrentUser() user: any, @Param("id") id: string) {
     return this.financialService.getDepositStatus(user.id, id);
   }
 
-  @Post('deposit/:id/confirm')
-  confirmDeposit(@CurrentUser() user: any, @Param('id') id: string) {
+  @Post("deposit/:id/confirm")
+  confirmDeposit(@CurrentUser() user: any, @Param("id") id: string) {
     return this.financialService.confirmDeposit(user.id, id);
   }
 
-  @Post('withdraw')
+  @Post("withdraw")
   createWithdraw(@CurrentUser() user: any, @Body() withdrawDto: WithdrawDto) {
     return this.financialService.createWithdraw(user.id, withdrawDto);
   }
 
-  @Get('transactions')
+  @Get("transactions")
   getTransactions(@CurrentUser() user: any) {
     return this.financialService.getTransactions(user.id);
   }

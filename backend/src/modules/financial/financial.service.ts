@@ -4,16 +4,13 @@ import {
   Inject,
   Injectable,
   NotFoundException,
-} from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { PrismaService } from '../../database/prisma.service';
-import { AffiliatesService } from '../affiliates/affiliates.service';
-import { DepositDto } from './dto/deposit.dto';
-import { WithdrawDto } from './dto/withdraw.dto';
-import {
-  PIX_PROVIDER,
-  PixProvider,
-} from './providers/pix-provider.interface';
+} from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
+import { PrismaService } from "../../database/prisma.service";
+import { AffiliatesService } from "../affiliates/affiliates.service";
+import { DepositDto } from "./dto/deposit.dto";
+import { WithdrawDto } from "./dto/withdraw.dto";
+import { PIX_PROVIDER, PixProvider } from "./providers/pix-provider.interface";
 
 @Injectable()
 export class FinancialService {
@@ -22,7 +19,7 @@ export class FinancialService {
     private configService: ConfigService,
     private affiliatesService: AffiliatesService,
     @Inject(PIX_PROVIDER) private pixProvider: PixProvider,
-  ) { }
+  ) {}
 
   async getBalance(userId: string) {
     const account = await this.prisma.account.findUnique({
@@ -30,7 +27,7 @@ export class FinancialService {
     });
 
     if (!account) {
-      throw new NotFoundException('Account not found');
+      throw new NotFoundException("Account not found");
     }
 
     return {
@@ -49,14 +46,14 @@ export class FinancialService {
     });
 
     if (!account) {
-      throw new NotFoundException('Account not found');
+      throw new NotFoundException("Account not found");
     }
 
     if (!depositDto.amount || Number(depositDto.amount) <= 0) {
-      throw new BadRequestException('Invalid deposit amount');
+      throw new BadRequestException("Invalid deposit amount");
     }
 
-    await this.assertDailyLimit(userId, 'DEPOSIT', Number(depositDto.amount));
+    await this.assertDailyLimit(userId, "DEPOSIT", Number(depositDto.amount));
 
     const charge = await this.pixProvider.createCharge({
       amount: Number(depositDto.amount),
@@ -72,13 +69,13 @@ export class FinancialService {
           data: {
             userId,
             accountId: account.id,
-            type: 'DEPOSIT',
+            type: "DEPOSIT",
             amount: depositDto.amount,
-            method: 'PIX',
+            method: "PIX",
             pixKey: depositDto.pixKey,
             externalId: charge.externalId,
             providerRef: charge.providerRef || this.pixProvider.name,
-            status: 'COMPLETED',
+            status: "COMPLETED",
             processedAt: new Date(),
           },
         });
@@ -96,7 +93,7 @@ export class FinancialService {
       await this.maybeRecordReferralCommission(
         userId,
         Number(depositDto.amount),
-        'DEPOSIT',
+        "DEPOSIT",
       );
 
       return {
@@ -105,7 +102,7 @@ export class FinancialService {
         pixCode: charge.pixCode,
         qrCode: charge.qrCode,
         amount: depositDto.amount,
-        status: 'COMPLETED',
+        status: "COMPLETED",
         balance: result.updatedAccount.balance,
         expiresAt: charge.expiresAt,
         autoConfirmed: true,
@@ -117,13 +114,13 @@ export class FinancialService {
       data: {
         userId,
         accountId: account.id,
-        type: 'DEPOSIT',
+        type: "DEPOSIT",
         amount: depositDto.amount,
-        method: 'PIX',
+        method: "PIX",
         pixKey: depositDto.pixKey,
         externalId: charge.externalId,
         providerRef: charge.providerRef || this.pixProvider.name,
-        status: 'PENDING',
+        status: "PENDING",
       },
     });
 
@@ -133,7 +130,7 @@ export class FinancialService {
       pixCode: charge.pixCode,
       qrCode: charge.qrCode,
       amount: depositDto.amount,
-      status: 'PENDING',
+      status: "PENDING",
       expiresAt: charge.expiresAt,
       autoConfirmed: false,
       provider: this.pixProvider.name,
@@ -142,9 +139,9 @@ export class FinancialService {
 
   async getDepositStatus(userId: string, transactionId: string) {
     const transaction = await this.prisma.transaction.findFirst({
-      where: { id: transactionId, userId, type: 'DEPOSIT' },
+      where: { id: transactionId, userId, type: "DEPOSIT" },
     });
-    if (!transaction) throw new NotFoundException('Deposit not found');
+    if (!transaction) throw new NotFoundException("Deposit not found");
     const account = await this.prisma.account.findUnique({ where: { userId } });
     return {
       transactionId: transaction.id,
@@ -163,12 +160,12 @@ export class FinancialService {
       where: {
         id: transactionId,
         userId,
-        type: 'DEPOSIT',
+        type: "DEPOSIT",
       },
     });
 
     if (!transaction) {
-      throw new NotFoundException('Deposit transaction not found');
+      throw new NotFoundException("Deposit transaction not found");
     }
 
     return this.completePendingDeposit(transaction);
@@ -176,11 +173,11 @@ export class FinancialService {
 
   async confirmByExternalId(externalId: string) {
     const transaction = await this.prisma.transaction.findFirst({
-      where: { externalId, type: 'DEPOSIT' },
+      where: { externalId, type: "DEPOSIT" },
     });
 
     if (!transaction) {
-      throw new NotFoundException('Deposit not found for externalId');
+      throw new NotFoundException("Deposit not found for externalId");
     }
 
     return this.completePendingDeposit(transaction);
@@ -194,17 +191,17 @@ export class FinancialService {
     status: string;
     externalId: string | null;
   }) {
-    if (transaction.status === 'COMPLETED') {
+    if (transaction.status === "COMPLETED") {
       return {
         transactionId: transaction.id,
         externalId: transaction.externalId,
-        status: 'COMPLETED',
-        message: 'Deposit already confirmed',
+        status: "COMPLETED",
+        message: "Deposit already confirmed",
         idempotent: true,
       };
     }
 
-    if (transaction.status !== 'PENDING') {
+    if (transaction.status !== "PENDING") {
       throw new BadRequestException(
         `Cannot confirm deposit with status ${transaction.status}`,
       );
@@ -214,7 +211,7 @@ export class FinancialService {
       const updatedTx = await tx.transaction.update({
         where: { id: transaction.id },
         data: {
-          status: 'COMPLETED',
+          status: "COMPLETED",
           processedAt: new Date(),
         },
       });
@@ -232,15 +229,15 @@ export class FinancialService {
     await this.maybeRecordReferralCommission(
       transaction.userId,
       Number(transaction.amount),
-      'DEPOSIT',
+      "DEPOSIT",
     );
 
     return {
       transactionId: result.updatedTx.id,
       externalId: result.updatedTx.externalId,
-      status: 'COMPLETED',
+      status: "COMPLETED",
       balance: result.updatedAccount.balance,
-      message: 'Deposit confirmed',
+      message: "Deposit confirmed",
       idempotent: false,
     };
   }
@@ -253,29 +250,33 @@ export class FinancialService {
     });
 
     if (!account) {
-      throw new NotFoundException('Account not found');
+      throw new NotFoundException("Account not found");
     }
 
     if (!withdrawDto.amount || Number(withdrawDto.amount) <= 0) {
-      throw new BadRequestException('Invalid withdraw amount');
+      throw new BadRequestException("Invalid withdraw amount");
     }
 
     if (Number(account.balance) < Number(withdrawDto.amount)) {
-      throw new BadRequestException('Insufficient balance');
+      throw new BadRequestException("Insufficient balance");
     }
 
-    await this.assertDailyLimit(userId, 'WITHDRAWAL', Number(withdrawDto.amount));
+    await this.assertDailyLimit(
+      userId,
+      "WITHDRAWAL",
+      Number(withdrawDto.amount),
+    );
 
     const result = await this.prisma.$transaction(async (tx) => {
       const transaction = await tx.transaction.create({
         data: {
           userId,
           accountId: account.id,
-          type: 'WITHDRAWAL',
+          type: "WITHDRAWAL",
           amount: withdrawDto.amount,
-          method: 'PIX',
+          method: "PIX",
           pixKey: withdrawDto.pixKey,
-          status: 'PENDING',
+          status: "PENDING",
         },
       });
 
@@ -293,14 +294,14 @@ export class FinancialService {
     return {
       transactionId: result.id,
       amount: withdrawDto.amount,
-      status: 'PENDING',
+      status: "PENDING",
     };
   }
 
   async getTransactions(userId: string) {
     return this.prisma.transaction.findMany({
       where: { userId },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
       take: 50,
     });
   }
@@ -311,21 +312,21 @@ export class FinancialService {
       select: { selfExcludedUntil: true, deletedAt: true, isActive: true },
     });
     if (!user || user.deletedAt || !user.isActive) {
-      throw new ForbiddenException('Account unavailable');
+      throw new ForbiddenException("Account unavailable");
     }
     if (user.selfExcludedUntil && user.selfExcludedUntil > new Date()) {
-      throw new ForbiddenException('Self-exclusion active');
+      throw new ForbiddenException("Self-exclusion active");
     }
   }
 
   private async assertDailyLimit(
     userId: string,
-    type: 'DEPOSIT' | 'WITHDRAWAL',
+    type: "DEPOSIT" | "WITHDRAWAL",
     amount: number,
   ) {
     const limitKey =
-      type === 'DEPOSIT' ? 'DEPOSIT_DAILY_LIMIT' : 'WITHDRAW_DAILY_LIMIT';
-    const defaultLimit = type === 'DEPOSIT' ? 50000 : 20000;
+      type === "DEPOSIT" ? "DEPOSIT_DAILY_LIMIT" : "WITHDRAW_DAILY_LIMIT";
+    const defaultLimit = type === "DEPOSIT" ? 50000 : 20000;
     const limit = Number(this.configService.get(limitKey) || defaultLimit);
     const start = new Date();
     start.setHours(0, 0, 0, 0);
@@ -334,7 +335,7 @@ export class FinancialService {
       where: {
         userId,
         type,
-        status: { in: ['PENDING', 'COMPLETED'] },
+        status: { in: ["PENDING", "COMPLETED"] },
         createdAt: { gte: start },
       },
       _sum: { amount: true },
@@ -372,9 +373,9 @@ export class FinancialService {
   }
 
   private shouldAutoConfirmPix(): boolean {
-    const flag = this.configService.get('PIX_AUTO_CONFIRM');
-    if (flag === 'true') return true;
-    if (flag === 'false') return false;
-    return this.configService.get('NODE_ENV') !== 'production';
+    const flag = this.configService.get("PIX_AUTO_CONFIRM");
+    if (flag === "true") return true;
+    if (flag === "false") return false;
+    return this.configService.get("NODE_ENV") !== "production";
   }
 }

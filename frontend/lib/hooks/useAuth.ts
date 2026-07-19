@@ -9,10 +9,35 @@ export function useLogin() {
   return useMutation({
     mutationFn: (data: LoginInput) => authApi.login(data),
     onSuccess: (data) => {
+      if (data.mfaRequired || !data.accessToken) {
+        return;
+      }
       setUser(data.user);
       setToken(data.accessToken);
       localStorage.setItem('accessToken', data.accessToken);
-      localStorage.setItem('refreshToken', data.refreshToken);
+      if (data.refreshToken) {
+        localStorage.setItem('refreshToken', data.refreshToken);
+      }
+      queryClient.invalidateQueries({ queryKey: ['auth'] });
+    },
+  });
+}
+
+export function useCompleteMfaLogin() {
+  const queryClient = useQueryClient();
+  const { setUser, setToken } = useAuthStore();
+
+  return useMutation({
+    mutationFn: (data: { mfaToken: string; token: string }) =>
+      authApi.completeMfaLogin(data),
+    onSuccess: (data) => {
+      if (!data.accessToken) return;
+      setUser(data.user);
+      setToken(data.accessToken);
+      localStorage.setItem('accessToken', data.accessToken);
+      if (data.refreshToken) {
+        localStorage.setItem('refreshToken', data.refreshToken);
+      }
       queryClient.invalidateQueries({ queryKey: ['auth'] });
     },
   });
@@ -25,10 +50,13 @@ export function useRegister() {
   return useMutation({
     mutationFn: (data: RegisterInput) => authApi.register(data),
     onSuccess: (data) => {
+      if (!data.accessToken) return;
       setUser(data.user);
       setToken(data.accessToken);
       localStorage.setItem('accessToken', data.accessToken);
-      localStorage.setItem('refreshToken', data.refreshToken);
+      if (data.refreshToken) {
+        localStorage.setItem('refreshToken', data.refreshToken);
+      }
       queryClient.invalidateQueries({ queryKey: ['auth'] });
     },
   });

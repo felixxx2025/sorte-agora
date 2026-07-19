@@ -1,4 +1,11 @@
-import { IsEmail, IsString, MinLength, IsOptional, IsEnum } from 'class-validator';
+import {
+  IsDateString,
+  IsEmail,
+  IsEnum,
+  IsOptional,
+  IsString,
+  MinLength,
+} from "class-validator";
 
 export class RegisterDto {
   @IsEmail()
@@ -7,6 +14,9 @@ export class RegisterDto {
   @IsString()
   @MinLength(8)
   password: string;
+
+  @IsDateString()
+  dateOfBirth: string;
 
   @IsString()
   @IsOptional()
@@ -22,7 +32,7 @@ export class RegisterDto {
 
   @IsString()
   @IsOptional()
-  @IsEnum(['BRL', 'USD', 'EUR'])
+  @IsEnum(["BRL", "USD", "EUR"])
   currency?: string;
 
   @IsString()

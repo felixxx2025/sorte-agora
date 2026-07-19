@@ -1,9 +1,9 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { JwtAuthGuard } from '../../common/guards/auth.guard';
-import { SportsController } from './sports.controller';
-import { SportsService } from './sports.service';
+import { Test, TestingModule } from "@nestjs/testing";
+import { JwtAuthGuard } from "../../common/guards/auth.guard";
+import { SportsController } from "./sports.controller";
+import { SportsService } from "./sports.service";
 
-describe('SportsController', () => {
+describe("SportsController", () => {
   let controller: SportsController;
   let sportsService: SportsService;
 
@@ -34,15 +34,15 @@ describe('SportsController', () => {
     jest.clearAllMocks();
   });
 
-  it('should be defined', () => {
+  it("should be defined", () => {
     expect(controller).toBeDefined();
   });
 
-  describe('getEvents', () => {
-    it('should return all events', async () => {
+  describe("getEvents", () => {
+    it("should return all events", async () => {
       const mockEvents = [
-        { id: '1', name: 'Football Match', isLive: true },
-        { id: '2', name: 'Basketball Match', isLive: false },
+        { id: "1", name: "Football Match", isLive: true },
+        { id: "2", name: "Basketball Match", isLive: false },
       ];
 
       mockSportsService.getEvents.mockResolvedValue(mockEvents);
@@ -53,64 +53,67 @@ describe('SportsController', () => {
       expect(mockSportsService.getEvents).toHaveBeenCalled();
     });
 
-    it('should return live events only', async () => {
-      const mockEvents = [{ id: '1', name: 'Football Match', isLive: true }];
+    it("should return live events only", async () => {
+      const mockEvents = [{ id: "1", name: "Football Match", isLive: true }];
 
       mockSportsService.getEvents.mockResolvedValue(mockEvents);
 
-      const result = await controller.getEvents('true');
+      const result = await controller.getEvents("true");
 
       expect(result).toHaveLength(1);
       expect(mockSportsService.getEvents).toHaveBeenCalledWith(true);
     });
   });
 
-  describe('getEvent', () => {
-    it('should return a specific event', async () => {
-      const mockEvent = { id: '1', name: 'Football Match', isLive: true };
+  describe("getEvent", () => {
+    it("should return a specific event", async () => {
+      const mockEvent = { id: "1", name: "Football Match", isLive: true };
 
       mockSportsService.getEvent.mockResolvedValue(mockEvent);
 
-      const result = await controller.getEvent('1');
+      const result = await controller.getEvent("1");
 
       expect(result).toBeDefined();
-      expect(result.name).toBe('Football Match');
-      expect(mockSportsService.getEvent).toHaveBeenCalledWith('1');
+      expect(result.name).toBe("Football Match");
+      expect(mockSportsService.getEvent).toHaveBeenCalledWith("1");
     });
   });
 
-  describe('placeBet', () => {
-    it('should place a bet', async () => {
-      const placeBetDto = { selectionId: 's1', stake: 100 };
-      const user = { id: 'user1' };
+  describe("placeBet", () => {
+    it("should place a bet", async () => {
+      const placeBetDto = { selectionId: "s1", stake: 100 };
+      const user = { id: "user1" };
       const mockResult = {
-        betId: 'bet1',
+        betId: "bet1",
         potentialWin: 250,
-        status: 'PENDING',
+        status: "PENDING",
       };
 
       mockSportsService.placeBet.mockResolvedValue(mockResult);
 
       const result = await controller.placeBet(user, placeBetDto as any);
 
-      expect(result).toHaveProperty('betId');
-      expect(mockSportsService.placeBet).toHaveBeenCalledWith('user1', placeBetDto);
+      expect(result).toHaveProperty("betId");
+      expect(mockSportsService.placeBet).toHaveBeenCalledWith(
+        "user1",
+        placeBetDto,
+      );
     });
   });
 
-  describe('getBets', () => {
-    it('should return user bets', async () => {
+  describe("getBets", () => {
+    it("should return user bets", async () => {
       const mockBets = [
-        { id: 'bet1', userId: 'user1', stake: 100, status: 'PENDING' },
-        { id: 'bet2', userId: 'user1', stake: 200, status: 'WON' },
+        { id: "bet1", userId: "user1", stake: 100, status: "PENDING" },
+        { id: "bet2", userId: "user1", stake: 200, status: "WON" },
       ];
 
       mockSportsService.getBets.mockResolvedValue(mockBets);
 
-      const result = await controller.getBets({ id: 'user1' });
+      const result = await controller.getBets({ id: "user1" });
 
       expect(result).toHaveLength(2);
-      expect(mockSportsService.getBets).toHaveBeenCalledWith('user1');
+      expect(mockSportsService.getBets).toHaveBeenCalledWith("user1");
     });
   });
 });

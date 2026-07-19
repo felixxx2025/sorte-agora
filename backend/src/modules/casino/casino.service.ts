@@ -4,16 +4,16 @@ import {
   Inject,
   Injectable,
   NotFoundException,
-} from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import * as crypto from 'crypto';
-import { CacheService } from '../../common/services/cache.service';
-import { PrismaService } from '../../database/prisma.service';
-import { LaunchGameDto } from './dto/launch-game.dto';
+} from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
+import * as crypto from "crypto";
+import { CacheService } from "../../common/services/cache.service";
+import { PrismaService } from "../../database/prisma.service";
+import { LaunchGameDto } from "./dto/launch-game.dto";
 import {
   CASINO_PROVIDER,
   CasinoProvider,
-} from './providers/casino-provider.interface';
+} from "./providers/casino-provider.interface";
 
 @Injectable()
 export class CasinoService {
@@ -25,7 +25,7 @@ export class CasinoService {
   ) {}
 
   async getGames(category?: string) {
-    const cacheKey = `casino:games:${category || 'all'}`;
+    const cacheKey = `casino:games:${category || "all"}`;
     const cached = await this.cache.getJson<any[]>(cacheKey);
     if (cached) return cached;
 
@@ -36,7 +36,7 @@ export class CasinoService {
         ...where,
         isActive: true,
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
       take: 100,
     });
 
@@ -46,7 +46,7 @@ export class CasinoService {
 
   async getGame(id: string) {
     const game = await this.prisma.casinoGame.findUnique({ where: { id } });
-    if (!game) throw new NotFoundException('Game not found');
+    if (!game) throw new NotFoundException("Game not found");
     return game;
   }
 
@@ -61,11 +61,11 @@ export class CasinoService {
     });
 
     if (!game || !game.isActive) {
-      throw new NotFoundException('Game not found');
+      throw new NotFoundException("Game not found");
     }
 
     if (!launchGameDto.userId) {
-      throw new BadRequestException('userId is required');
+      throw new BadRequestException("userId is required");
     }
 
     const sessionToken = this.generateSessionToken();
@@ -101,7 +101,7 @@ export class CasinoService {
   async getSessions(userId: string) {
     return this.prisma.casinoSession.findMany({
       where: { userId },
-      orderBy: { startedAt: 'desc' },
+      orderBy: { startedAt: "desc" },
       take: 20,
       include: { game: true },
     });
@@ -113,14 +113,14 @@ export class CasinoService {
       select: { selfExcludedUntil: true, deletedAt: true, isActive: true },
     });
     if (!user || user.deletedAt || !user.isActive) {
-      throw new ForbiddenException('Account unavailable');
+      throw new ForbiddenException("Account unavailable");
     }
     if (user.selfExcludedUntil && user.selfExcludedUntil > new Date()) {
-      throw new ForbiddenException('Self-exclusion active');
+      throw new ForbiddenException("Self-exclusion active");
     }
   }
 
   private generateSessionToken(): string {
-    return crypto.randomBytes(24).toString('hex');
+    return crypto.randomBytes(24).toString("hex");
   }
 }
