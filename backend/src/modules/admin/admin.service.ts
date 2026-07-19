@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { BanUserDto } from './dto/ban-user.dto';
 import { UpdateBonusDto } from './dto/update-bonus.dto';
@@ -76,7 +76,7 @@ export class AdminService {
     });
 
     if (!transaction) {
-      throw new Error('Transaction not found');
+      throw new NotFoundException('Transaction not found');
     }
 
     // Update transaction status
@@ -106,7 +106,7 @@ export class AdminService {
     });
 
     if (!transaction) {
-      throw new Error('Transaction not found');
+      throw new NotFoundException('Transaction not found');
     }
 
     // Update transaction status
@@ -190,7 +190,7 @@ export class AdminService {
   async reviewKyc(kycId: string, decision: 'APPROVED' | 'REJECTED', adminId: string, reason?: string) {
     const record = await this.prisma.kyCRecord.findUnique({ where: { id: kycId } });
     if (!record) {
-      throw new Error('KYC record not found');
+      throw new NotFoundException('KYC record not found');
     }
 
     await this.prisma.kyCRecord.update({

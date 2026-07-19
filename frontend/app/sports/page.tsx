@@ -4,7 +4,6 @@ import { AuthGuard } from '@/components/AuthGuard';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { useAuthStore } from '@/lib/stores/authStore';
 import { useCallback, useEffect, useState } from 'react';
 
 function getApiBase() {
@@ -80,7 +79,6 @@ function SportsContent() {
         body: JSON.stringify({
           selectionId: selectedSelection.id,
           stake: parseFloat(betAmount),
-          userId: useAuthStore.getState().user?.id,
         }),
       });
       const payload = await response.json();

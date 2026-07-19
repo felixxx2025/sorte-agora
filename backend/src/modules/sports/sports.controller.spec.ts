@@ -94,10 +94,7 @@ describe('SportsController', () => {
       const result = await controller.placeBet(user, placeBetDto as any);
 
       expect(result).toHaveProperty('betId');
-      expect(mockSportsService.placeBet).toHaveBeenCalledWith({
-        ...placeBetDto,
-        userId: 'user1',
-      });
+      expect(mockSportsService.placeBet).toHaveBeenCalledWith('user1', placeBetDto);
     });
   });
 

@@ -29,9 +29,13 @@ async function bootstrap() {
     }),
   );
 
-  // CORS
+  // CORS (vírgula-separado; ex.: http://localhost:3000,http://localhost:3010)
+  const corsOrigins = (process.env.CORS_ORIGIN || 'http://localhost:3000,http://localhost:3010,http://localhost:8080')
+    .split(',')
+    .map((o) => o.trim())
+    .filter(Boolean);
   app.enableCors({
-    origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+    origin: corsOrigins.length === 1 ? corsOrigins[0] : corsOrigins,
     credentials: true,
   });
 

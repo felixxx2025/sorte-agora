@@ -14,16 +14,9 @@ import {
   useRejectWithdrawal,
   useUnbanUser,
 } from '@/lib/hooks';
-import { adminApi } from '@/lib/api/admin';
-import { useAuthStore } from '@/lib/stores/authStore';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 function AdminContent() {
-  const { user } = useAuthStore();
-  const router = useRouter();
-  const queryClient = useQueryClient();
   const [tab, setTab] = useState<'overview' | 'users' | 'withdrawals' | 'kyc' | 'reports'>('overview');
   const [message, setMessage] = useState('');
 
@@ -35,15 +28,6 @@ function AdminContent() {
   const unbanUser = useUnbanUser();
   const approve = useApproveWithdrawal();
   const reject = useRejectWithdrawal();
-
-  const kycQuery = useQuery({
-    queryKey: ['admin', 'kyc'],
-    queryFn: async () => {
-      const res = await adminApi.getDashboard(); // placeholder if no kyc method
-      return res;
-    },
-    enabled: false,
-  });
 
   const [kycList, setKycList] = useState<any[]>([]);
   const loadKyc = async () => {
@@ -57,11 +41,8 @@ function AdminContent() {
   };
 
   useEffect(() => {
-    if ((user as any)?.role && (user as any).role !== 'ADMIN') {
-      // role may not be on store — check via profile later
-    }
     if (tab === 'kyc') loadKyc();
-  }, [tab, user]);
+  }, [tab]);
 
   const reviewKyc = async (id: string, decision: 'APPROVED' | 'REJECTED') => {
     const { default: apiClient } = await import('@/lib/api/client');

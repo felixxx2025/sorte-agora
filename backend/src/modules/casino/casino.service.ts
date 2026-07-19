@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
+import { CacheService } from '../../common/services/cache.service';
 import { PrismaService } from '../../database/prisma.service';
 import { LaunchGameDto } from './dto/launch-game.dto';
 
@@ -13,12 +14,17 @@ export class CasinoService {
   constructor(
     private prisma: PrismaService,
     private configService: ConfigService,
+    private cache: CacheService,
   ) {}
 
   async getGames(category?: string) {
+    const cacheKey = `casino:games:${category || 'all'}`;
+    const cached = await this.cache.getJson<any[]>(cacheKey);
+    if (cached) return cached;
+
     const where = category ? { category } : {};
 
-    return this.prisma.casinoGame.findMany({
+    const games = await this.prisma.casinoGame.findMany({
       where: {
         ...where,
         isActive: true,
@@ -26,6 +32,9 @@ export class CasinoService {
       orderBy: { createdAt: 'desc' },
       take: 100,
     });
+
+    await this.cache.setJson(cacheKey, games, 60);
+    return games;
   }
 
   async getGame(id: string) {

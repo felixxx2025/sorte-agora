@@ -25,10 +25,7 @@ export class SportsController {
 
   @Post('bets')
   placeBet(@CurrentUser() user: any, @Body() placeBetDto: PlaceBetDto) {
-    return this.sportsService.placeBet({
-      ...placeBetDto,
-      userId: user.id,
-    });
+    return this.sportsService.placeBet(user.id, placeBetDto);
   }
 
   @Get('bets')

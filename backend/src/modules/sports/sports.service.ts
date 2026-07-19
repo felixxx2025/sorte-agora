@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { CacheService } from '../../common/services/cache.service';
 import { PrismaService } from '../../database/prisma.service';
 import { VipService } from '../vip/vip.service';
 import { PlaceBetDto } from './dto/place-bet.dto';
@@ -12,10 +13,15 @@ export class SportsService {
   constructor(
     private prisma: PrismaService,
     private vipService: VipService,
+    private cache: CacheService,
   ) { }
 
   async getEvents(isLive: boolean = false) {
-    return this.prisma.sportsEvent.findMany({
+    const cacheKey = `sports:events:live=${isLive}`;
+    const cached = await this.cache.getJson<any[]>(cacheKey);
+    if (cached) return cached;
+
+    const events = await this.prisma.sportsEvent.findMany({
       where: isLive ? { isLive: true } : undefined,
       include: {
         markets: {
@@ -27,6 +33,9 @@ export class SportsService {
       orderBy: { startTime: 'asc' },
       take: 50,
     });
+
+    await this.cache.setJson(cacheKey, events, 30);
+    return events;
   }
 
   async getEvent(id: string) {
@@ -44,7 +53,7 @@ export class SportsService {
     return event;
   }
 
-  async placeBet(placeBetDto: PlaceBetDto) {
+  async placeBet(userId: string, placeBetDto: PlaceBetDto) {
     const selection = await this.prisma.sportsSelection.findUnique({
       where: { id: placeBetDto.selectionId },
       include: { market: { include: { event: true } } },
@@ -55,7 +64,7 @@ export class SportsService {
     }
 
     const account = await this.prisma.account.findUnique({
-      where: { userId: placeBetDto.userId },
+      where: { userId },
     });
 
     if (!account) {
@@ -69,7 +78,7 @@ export class SportsService {
     const result = await this.prisma.$transaction(async (tx) => {
       const bet = await tx.sportsBet.create({
         data: {
-          userId: placeBetDto.userId,
+          userId,
           eventId: selection.market.eventId,
           selectionId: placeBetDto.selectionId,
           stake: placeBetDto.stake,
@@ -85,7 +94,7 @@ export class SportsService {
 
       await tx.transaction.create({
         data: {
-          userId: placeBetDto.userId,
+          userId,
           accountId: account.id,
           type: 'BET',
           amount: placeBetDto.stake,
@@ -97,9 +106,9 @@ export class SportsService {
     });
 
     try {
-      await this.vipService.addProgress(placeBetDto.userId, 'BETS_COUNT', 1);
+      await this.vipService.addProgress(userId, 'BETS_COUNT', 1);
       await this.vipService.addProgress(
-        placeBetDto.userId,
+        userId,
         'BET_AMOUNT',
         Math.floor(Number(placeBetDto.stake)),
       );

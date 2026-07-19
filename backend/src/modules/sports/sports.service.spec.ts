@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { CacheService } from '../../common/services/cache.service';
 import { PrismaService } from '../../database/prisma.service';
 import { VipService } from '../vip/vip.service';
 import { SportsService } from './sports.service';
@@ -34,12 +35,19 @@ describe('SportsService', () => {
     addProgress: jest.fn().mockResolvedValue(undefined),
   };
 
+  const mockCacheService = {
+    getJson: jest.fn().mockResolvedValue(null),
+    setJson: jest.fn().mockResolvedValue(undefined),
+    del: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         SportsService,
         { provide: PrismaService, useValue: mockPrismaService },
         { provide: VipService, useValue: mockVipService },
+        { provide: CacheService, useValue: mockCacheService },
       ],
     }).compile();
 
@@ -56,6 +64,7 @@ describe('SportsService', () => {
       mockPrismaService.sportsEvent.findMany.mockResolvedValue([{ id: '1' }]);
       const result = await service.getEvents(false);
       expect(result).toHaveLength(1);
+      expect(mockCacheService.setJson).toHaveBeenCalled();
     });
   });
 

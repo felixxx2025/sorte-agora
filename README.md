@@ -4,13 +4,20 @@
 
 | Campo | Valor |
 |-------|-------|
-| **Versão** | 1.0.0-fase2 |
-| **Fase atual** | **Fase 2 — Implementação concluída** |
-| **Maturidade** | ~65/100 (produto demo completo; providers reais na Fase 3) |
+| **Versão** | 1.0.0-fase3 |
+| **Fase atual** | **Fase 3 — Fechamento concluído** |
+| **Maturidade** | ~75/100 (demo/staging; ver `GO_LIVE.md`) |
 | **Domínio** | Apostas (cassino + esportes) — **não** rifas |
 | **Última atualização** | 19 de julho de 2026 |
 
 > Documentos antigos que afirmam “92/100 pronto para produção” estão **desatualizados**. A fonte de verdade é [`STATUS.md`](./STATUS.md).
+
+## O que a Fase 3 entregou
+
+- Review: HttpExceptions, placeBet sem userId no body, health 503
+- Cache Redis, healthchecks Compose, backup/rollback, smoke-api
+- E2E Playwright **5/5** (`E2E_PORT=3010`) + `GO_LIVE.md` + CHANGELOG honesto
+- Testes: **80/80** unit + smoke OK — `docs/test-results/fase-3.md`
 
 ## O que a Fase 2 entregou
 
@@ -82,4 +89,4 @@ npm run dev            # http://localhost:3000
 
 1. ~~Fase 1 — Estabilização~~ ✅
 2. ~~Fase 2 — Implementação completa~~ ✅
-3. **Fase 3** — Testes amplos, review, docs finais, go-live checklist
+3. ~~Fase 3 — Fechamento~~ ✅

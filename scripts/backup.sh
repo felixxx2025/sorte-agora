@@ -1,67 +1,58 @@
 #!/bin/bash
-
-# Script de Backup - SORTE AGORA
+# Backup SORTE AGORA — Postgres via Compose
 # Uso: ./scripts/backup.sh
 
-set -e
+set -euo pipefail
 
-# Cores
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
+RED='\033[0;31m'
 NC='\033[0m'
 
-log_info() {
-    echo -e "${GREEN}[INFO]${NC} $1"
-}
+log_info() { echo -e "${GREEN}[INFO]${NC} $1"; }
+log_warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
+log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 
-log_warn() {
-    echo -e "${YELLOW}[WARN]${NC} $1"
-}
+ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$ROOT_DIR"
 
-# Criar diretório de backup
-BACKUP_DIR="./backups/$(date +%Y%m%d_%H%M%S)"
+COMPOSE="docker compose"
+STAMP=$(date +%Y%m%d_%H%M%S)
+BACKUP_DIR="./backups/${STAMP}"
 mkdir -p "$BACKUP_DIR"
 
-log_info "Iniciando backup para $BACKUP_DIR..."
+log_info "Backup em $BACKUP_DIR"
 
-# Backup do banco de dados
-log_info "Backup do banco de dados..."
-docker-compose exec -T postgres pg_dump -U sorteagora sorte_agora > "$BACKUP_DIR/database.sql"
+if ! $COMPOSE ps postgres --status running 2>/dev/null | grep -q postgres; then
+  log_warn "Subindo postgres..."
+  $COMPOSE up -d postgres
+  sleep 5
+fi
 
-# Backup de volumes
-log_info "Backup de volumes Docker..."
-docker run --rm \
-    -v windsurf-project_postgres_data:/data \
-    -v "$BACKUP_DIR":/backup \
-    ubuntu tar czf /backup/postgres-volume.tar.gz /data
+log_info "Dump SQL..."
+$COMPOSE exec -T postgres pg_dump -U sorteagora sorte_agora > "$BACKUP_DIR/database.sql"
 
-docker run --rm \
-    -v windsurf-project_redis_data:/data \
-    -v "$BACKUP_DIR":/backup \
-    ubuntu tar czf /backup/redis-volume.tar.gz /data
+if [ -f backend/.env ]; then
+  cp backend/.env "$BACKUP_DIR/backend.env"
+else
+  log_warn "backend/.env ausente — pulando"
+fi
 
-# Backup de arquivos de configuração
-log_info "Backup de configurações..."
-cp backend/.env "$BACKUP_DIR/backend.env"
-cp frontend/.env.local "$BACKUP_DIR/frontend.env"
+if [ -f frontend/.env.local ]; then
+  cp frontend/.env.local "$BACKUP_DIR/frontend.env"
+else
+  log_warn "frontend/.env.local ausente — pulando"
+fi
 
-# Comprimir backup
-log_info "Comprimindo backup..."
-cd backups
-tar czf "$(basename $BACKUP_DIR).tar.gz" "$(basename $BACKUP_DIR)"
-cd ..
-
-# Remover diretório temporário
+log_info "Empacotando..."
+mkdir -p backups
+tar -czf "backups/${STAMP}.tar.gz" -C backups "$STAMP"
 rm -rf "$BACKUP_DIR"
 
-# Manter apenas últimos 7 backups
-log_info "Limpando backups antigos (mantendo últimos 7)..."
+# Manter últimos 7
 cd backups
-ls -t | tail -n +8 | xargs -r rm -rf
+ls -1t *.tar.gz 2>/dev/null | tail -n +8 | xargs -r rm -f
 cd ..
 
-log_info "Backup concluído: backups/$(basename $BACKUP_DIR).tar.gz"
-
-# Informar tamanho
-BACKUP_SIZE=$(du -h "backups/$(basename $BACKUP_DIR).tar.gz" | cut -f1)
-log_info "Tamanho do backup: $BACKUP_SIZE"
+SIZE=$(du -h "backups/${STAMP}.tar.gz" | cut -f1)
+log_info "Backup concluído: backups/${STAMP}.tar.gz ($SIZE)"

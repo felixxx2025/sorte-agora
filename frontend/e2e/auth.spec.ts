@@ -2,29 +2,28 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Autenticação', () => {
   test('deve carregar a página de login', async ({ page }) => {
-    await page.goto('/login');
+    await page.goto('/login', { waitUntil: 'networkidle' });
     await expect(page).toHaveTitle(/SORTE AGORA/);
-    await expect(page.locator('form')).toBeVisible();
+    await expect(page.locator('form')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('h1')).toContainText('Entrar');
   });
 
   test('deve mostrar erro com credenciais inválidas', async ({ page }) => {
-    await page.goto('/login');
+    await page.goto('/login', { waitUntil: 'networkidle' });
+    await page.locator('input[type="email"]').waitFor({ state: 'visible', timeout: 15000 });
     await page.fill('input[type="email"]', 'invalid@test.com');
     await page.fill('input[type="password"]', 'wrongpassword');
     await page.click('button[type="submit"]');
-    
-    // Espera pela mensagem de erro
-    await expect(page.locator('text=/erro/i')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByRole('alert')).toBeVisible({ timeout: 15000 });
   });
 
-  test('deve redirecionar para dashboard após login bem-sucedido', async ({ page }) => {
-    await page.goto('/login');
-    await page.fill('input[type="email"]', 'test@example.com');
-    await page.fill('input[type="password"]', 'password123');
+  test('deve entrar com usuário demo e ir ao dashboard', async ({ page }) => {
+    test.skip(!process.env.E2E_API, 'Requer API (E2E_API=1) e seed demo');
+    await page.goto('/login', { waitUntil: 'networkidle' });
+    await page.fill('input[type="email"]', 'demo@sorteagora.com');
+    await page.fill('input[type="password"]', 'User1234!');
     await page.click('button[type="submit"]');
-    
-    // Nota: Este teste requer backend funcionando e usuário válido
-    // Para demonstração, vamos verificar se o formulário foi submetido
-    await expect(page).toHaveURL(/dashboard|login/);
+    await expect(page).toHaveURL(/dashboard/, { timeout: 20000 });
+    await expect(page.locator('h1')).toContainText('Dashboard');
   });
 });

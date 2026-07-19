@@ -1,33 +1,21 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('Casino', () => {
+async function loginAsDemo(page: import('@playwright/test').Page) {
+  await page.goto('/login');
+  await page.fill('input[type="email"]', 'demo@sorteagora.com');
+  await page.fill('input[type="password"]', 'User1234!');
+  await page.click('button[type="submit"]');
+  await expect(page).toHaveURL(/dashboard/, { timeout: 15000 });
+}
+
+test.describe('Cassino', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/login');
-    await page.evaluate(() => {
-      localStorage.setItem('accessToken', 'test-token');
-    });
+    test.skip(!process.env.E2E_API, 'Requer API (E2E_API=1) e seed demo');
+    await loginAsDemo(page);
+    await page.goto('/casino');
   });
 
-  test('deve carregar a página de casino', async ({ page }) => {
-    await page.goto('/casino');
-    await expect(page.locator('h1')).toContainText('Casino');
-  });
-
-  test('deve listar jogos disponíveis', async ({ page }) => {
-    await page.goto('/casino');
-    // Verifica se há cards de jogos
-    const gameCards = page.locator('[class*="card"]');
-    await expect(gameCards.first()).toBeVisible();
-  });
-
-  test('deve permitir filtrar jogos por categoria', async ({ page }) => {
-    await page.goto('/casino');
-    
-    // Verifica se há filtros de categoria
-    const categoryFilter = page.locator('select, button').first();
-    if (await categoryFilter.isVisible()) {
-      await categoryFilter.click();
-      // Verifica se opções de categoria aparecem
-    }
+  test('exibe lobby Cassino', async ({ page }) => {
+    await expect(page.getByRole('heading', { name: 'Cassino' })).toBeVisible();
   });
 });

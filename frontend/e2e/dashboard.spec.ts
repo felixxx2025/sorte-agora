@@ -1,36 +1,25 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('Dashboard', () => {
+async function loginAsDemo(page: import('@playwright/test').Page) {
+  await page.goto('/login');
+  await page.fill('input[type="email"]', 'demo@sorteagora.com');
+  await page.fill('input[type="password"]', 'User1234!');
+  await page.click('button[type="submit"]');
+  await expect(page).toHaveURL(/dashboard/, { timeout: 15000 });
+}
+
+test.describe('Dashboard autenticado', () => {
   test.beforeEach(async ({ page }) => {
-    // Simula login armazenando token no localStorage
-    await page.goto('/login');
-    await page.evaluate(() => {
-      localStorage.setItem('accessToken', 'test-token');
-      localStorage.setItem('refreshToken', 'test-refresh');
-    });
+    test.skip(!process.env.E2E_API, 'Requer API (E2E_API=1) e seed demo');
+    await loginAsDemo(page);
   });
 
-  test('deve carregar o dashboard com autenticação', async ({ page }) => {
-    await page.goto('/dashboard');
-    await expect(page.locator('h1')).toContainText('Dashboard');
-  });
-
-  test('deve mostrar saldo do usuário', async ({ page }) => {
-    await page.goto('/dashboard');
-    // Verifica se elementos de saldo estão presentes
-    await expect(page.locator('text=/saldo/i')).toBeVisible();
-  });
-
-  test('deve ter navegação para outras páginas', async ({ page }) => {
-    await page.goto('/dashboard');
-    
-    // Verifica links de navegação
-    const casinoLink = page.locator('a[href="/casino"]');
-    const walletLink = page.locator('a[href="/wallet"]');
-    const vipLink = page.locator('a[href="/vip"]');
-    
-    await expect(casinoLink).toBeVisible();
-    await expect(walletLink).toBeVisible();
-    await expect(vipLink).toBeVisible();
+  test('exibe saldo e links principais', async ({ page }) => {
+    await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
+    await expect(page.getByText(/Saldo/i).first()).toBeVisible();
+    const nav = page.getByRole('navigation');
+    await expect(nav.getByRole('link', { name: 'Cassino' })).toBeVisible();
+    await expect(nav.getByRole('link', { name: 'Carteira' })).toBeVisible();
+    await expect(nav.getByRole('link', { name: 'VIP' })).toBeVisible();
   });
 });
