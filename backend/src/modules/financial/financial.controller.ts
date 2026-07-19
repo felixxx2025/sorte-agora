@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Param, Post, Body, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../../common/guards/auth.guard';
 import { CurrentUser } from '../../common/decorators/user.decorator';
 import { FinancialService } from './financial.service';
@@ -18,6 +18,11 @@ export class FinancialController {
   @Post('deposit')
   createDeposit(@CurrentUser() user: any, @Body() depositDto: DepositDto) {
     return this.financialService.createDeposit(user.id, depositDto);
+  }
+
+  @Post('deposit/:id/confirm')
+  confirmDeposit(@CurrentUser() user: any, @Param('id') id: string) {
+    return this.financialService.confirmDeposit(user.id, id);
   }
 
   @Post('withdraw')

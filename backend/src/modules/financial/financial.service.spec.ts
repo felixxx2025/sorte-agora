@@ -1,10 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../database/prisma.service';
 import { FinancialService } from './financial.service';
 
 describe('FinancialService', () => {
   let service: FinancialService;
-  let prismaService: PrismaService;
 
   const mockPrismaService = {
     account: {
@@ -15,7 +16,18 @@ describe('FinancialService', () => {
     transaction: {
       create: jest.fn(),
       findMany: jest.fn(),
+      findFirst: jest.fn(),
+      update: jest.fn(),
     },
+    $transaction: jest.fn(),
+  };
+
+  const mockConfigService = {
+    get: jest.fn((key: string) => {
+      if (key === 'PIX_AUTO_CONFIRM') return 'true';
+      if (key === 'NODE_ENV') return 'test';
+      return undefined;
+    }),
   };
 
   beforeEach(async () => {
@@ -26,12 +38,14 @@ describe('FinancialService', () => {
           provide: PrismaService,
           useValue: mockPrismaService,
         },
+        {
+          provide: ConfigService,
+          useValue: mockConfigService,
+        },
       ],
     }).compile();
 
     service = module.get<FinancialService>(FinancialService);
-    prismaService = module.get<PrismaService>(PrismaService);
-
     jest.clearAllMocks();
   });
 
@@ -62,10 +76,15 @@ describe('FinancialService', () => {
         where: { userId: 'user1' },
       });
     });
+
+    it('should throw NotFoundException when account missing', async () => {
+      mockPrismaService.account.findUnique.mockResolvedValue(null);
+      await expect(service.getBalance('user1')).rejects.toThrow(NotFoundException);
+    });
   });
 
   describe('createDeposit', () => {
-    it('should create a deposit transaction', async () => {
+    it('should create a deposit and credit balance when auto-confirm is on', async () => {
       const mockAccount = {
         id: '1',
         userId: 'user1',
@@ -74,14 +93,24 @@ describe('FinancialService', () => {
       };
 
       mockPrismaService.account.findUnique.mockResolvedValue(mockAccount);
-      mockPrismaService.account.update.mockResolvedValue(mockAccount);
-      mockPrismaService.transaction.create.mockResolvedValue({});
+      mockPrismaService.$transaction.mockImplementation(async (cb) =>
+        cb({
+          transaction: {
+            create: jest.fn().mockResolvedValue({ id: 'tx1' }),
+          },
+          account: {
+            update: jest.fn().mockResolvedValue({ ...mockAccount, balance: 1500 }),
+          },
+        }),
+      );
 
       const result = await service.createDeposit('user1', { amount: 500 });
 
       expect(result).toHaveProperty('pixCode');
       expect(result).toHaveProperty('qrCode');
-      expect(mockPrismaService.transaction.create).toHaveBeenCalled();
+      expect(result.status).toBe('COMPLETED');
+      expect(result.autoConfirmed).toBe(true);
+      expect(mockPrismaService.$transaction).toHaveBeenCalled();
     });
   });
 
@@ -95,8 +124,16 @@ describe('FinancialService', () => {
       };
 
       mockPrismaService.account.findUnique.mockResolvedValue(mockAccount);
-      mockPrismaService.account.update.mockResolvedValue(mockAccount);
-      mockPrismaService.transaction.create.mockResolvedValue({});
+      mockPrismaService.$transaction.mockImplementation(async (cb) =>
+        cb({
+          transaction: {
+            create: jest.fn().mockResolvedValue({ id: 'tx-w1' }),
+          },
+          account: {
+            update: jest.fn().mockResolvedValue(mockAccount),
+          },
+        }),
+      );
 
       const result = await service.createWithdraw('user1', {
         amount: 500,
@@ -104,7 +141,8 @@ describe('FinancialService', () => {
       });
 
       expect(result).toHaveProperty('transactionId');
-      expect(mockPrismaService.account.update).toHaveBeenCalled();
+      expect(result.status).toBe('PENDING');
+      expect(mockPrismaService.$transaction).toHaveBeenCalled();
     });
 
     it('should throw error with insufficient balance', async () => {
@@ -118,8 +156,8 @@ describe('FinancialService', () => {
       mockPrismaService.account.findUnique.mockResolvedValue(mockAccount);
 
       await expect(
-        service.createWithdraw('user1', { amount: 500, pixKey: 'test-pix-key' })
-      ).rejects.toThrow('Insufficient balance');
+        service.createWithdraw('user1', { amount: 500, pixKey: 'test-pix-key' }),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 
@@ -127,7 +165,7 @@ describe('FinancialService', () => {
     it('should return user transactions', async () => {
       const mockTransactions = [
         { id: '1', type: 'DEPOSIT', amount: 500, status: 'COMPLETED' },
-        { id: '2', type: 'WITHDRAW', amount: 200, status: 'COMPLETED' },
+        { id: '2', type: 'WITHDRAWAL', amount: 200, status: 'COMPLETED' },
       ];
 
       mockPrismaService.transaction.findMany.mockResolvedValue(mockTransactions);

@@ -10,10 +10,15 @@ export interface Response<T> {
 }
 
 @Injectable()
-export class TransformInterceptor<T> implements NestInterceptor<T, Response<T>> {
-  intercept(context: ExecutionContext, next: CallHandler): Observable<Response<T>> {
+export class TransformInterceptor<T> implements NestInterceptor<T, Response<T> | T> {
+  intercept(context: ExecutionContext, next: CallHandler): Observable<Response<T> | T> {
     const request = context.switchToHttp().getRequest();
-    const path = request.url;
+    const path = request.url || '';
+
+    // Prometheus e health raw: não envelopar
+    if (path.includes('/metrics')) {
+      return next.handle();
+    }
 
     return next.handle().pipe(
       map(data => ({

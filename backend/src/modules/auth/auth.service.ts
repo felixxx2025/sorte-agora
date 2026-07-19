@@ -2,9 +2,11 @@ import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
+import * as crypto from 'crypto';
 import * as QRCode from 'qrcode';
 import * as speakeasy from 'speakeasy';
 
+import { TokenBlacklistService } from '../../common/services/token-blacklist.service';
 import { PrismaService } from '../../database/prisma.service';
 import { EnableMfaDto } from './dto/enable-mfa.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
@@ -18,9 +20,18 @@ export class AuthService {
     private prisma: PrismaService,
     private jwtService: JwtService,
     private configService: ConfigService,
+    private tokenBlacklistService: TokenBlacklistService,
   ) { }
 
   async register(registerDto: RegisterDto) {
+    const existing = await this.prisma.user.findUnique({
+      where: { email: registerDto.email },
+    });
+
+    if (existing) {
+      throw new BadRequestException('Email already registered');
+    }
+
     const hashedPassword = await bcrypt.hash(registerDto.password, 12);
 
     const user = await this.prisma.user.create({
@@ -40,7 +51,6 @@ export class AuthService {
       },
     });
 
-    // Create account
     await this.prisma.account.create({
       data: {
         userId: user.id,
@@ -48,8 +58,10 @@ export class AuthService {
       },
     });
 
+    const tokens = await this.login(user);
+
     return {
-      user,
+      ...tokens,
       message: 'Registration successful',
     };
   }
@@ -59,10 +71,9 @@ export class AuthService {
 
     const accessToken = this.jwtService.sign(payload);
     const refreshToken = this.jwtService.sign(payload, {
-      expiresIn: this.configService.get('JWT_REFRESH_EXPIRES_IN'),
+      expiresIn: this.configService.get('JWT_REFRESH_EXPIRES_IN') || '7d',
     });
 
-    // Update last login
     await this.prisma.user.update({
       where: { id: user.id },
       data: { lastLoginAt: new Date() },
@@ -86,7 +97,7 @@ export class AuthService {
       include: { account: true },
     });
 
-    if (!user) {
+    if (!user || !user.password) {
       return null;
     }
 
@@ -103,20 +114,45 @@ export class AuthService {
     return result;
   }
 
-  async refresh(user: any) {
-    const payload = { sub: user.id, email: user.email };
-    const accessToken = this.jwtService.sign(payload);
+  async refresh(refreshToken: string) {
+    if (!refreshToken) {
+      throw new UnauthorizedException('Refresh token required');
+    }
+
+    if (await this.tokenBlacklistService.isBlacklisted(refreshToken)) {
+      throw new UnauthorizedException('Token has been revoked');
+    }
+
+    let payload: any;
+    try {
+      payload = this.jwtService.verify(refreshToken);
+    } catch {
+      throw new UnauthorizedException('Invalid or expired refresh token');
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: payload.sub },
+    });
+
+    if (!user || !user.isActive || user.isBanned) {
+      throw new UnauthorizedException('User not found or inactive');
+    }
+
+    const accessToken = this.jwtService.sign({
+      sub: user.id,
+      email: user.email,
+    });
 
     return { accessToken };
   }
 
   async logout(user: any, token: string) {
-    // Add token to blacklist
-    // const expiresIn = 3600; // 1 hour
-    // await this.tokenBlacklistService.addToBlacklist(token, expiresIn);
-
-    // Log audit
-    // await this.auditService.logAction(user.id, 'LOGOUT', 'USER', { email: user.email });
+    if (token) {
+      const expiresIn = this.parseExpirySeconds(
+        this.configService.get('JWT_EXPIRES_IN') || '15m',
+      );
+      await this.tokenBlacklistService.addToBlacklist(token, expiresIn);
+    }
 
     return { message: 'Logout successful' };
   }
@@ -156,8 +192,6 @@ export class AuthService {
       },
     });
 
-    // await this.auditService.logAction(userId, 'MFA_ENABLED', 'USER');
-
     return { message: 'MFA enabled successfully' };
   }
 
@@ -191,8 +225,6 @@ export class AuthService {
         mfaSecret: null,
       },
     });
-
-    // await this.auditService.logAction(userId, 'MFA_DISABLED', 'USER');
 
     return { message: 'MFA disabled successfully' };
   }
@@ -250,12 +282,11 @@ export class AuthService {
     });
 
     if (!user) {
-      // Don't reveal if user exists
       return { message: 'If the email exists, a reset link has been sent' };
     }
 
     const resetToken = this.generateResetToken();
-    const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 hour
+    const resetTokenExpiry = new Date(Date.now() + 3600000);
 
     await this.prisma.user.update({
       where: { id: user.id },
@@ -265,12 +296,17 @@ export class AuthService {
       },
     });
 
-    // await this.auditService.logAction(user.id, 'PASSWORD_RESET_REQUESTED', 'USER', { email: user.email });
+    const frontendUrl = this.configService.get('FRONTEND_URL') || 'http://localhost:3000';
+    // Fase 1: e-mail real na Fase 2 — link disponível nos logs de desenvolvimento
+    console.log(`Password reset link: ${frontendUrl}/reset-password?token=${resetToken}`);
 
-    // In production, send email with reset link
-    console.log(`Password reset link: http://localhost:3000/reset-password?token=${resetToken}`);
-
-    return { message: 'If the email exists, a reset link has been sent' };
+    return {
+      message: 'If the email exists, a reset link has been sent',
+      // Expõe token apenas em development para testes da Fase 1
+      ...(this.configService.get('NODE_ENV') !== 'production'
+        ? { resetToken, resetUrl: `${frontendUrl}/reset-password?token=${resetToken}` }
+        : {}),
+    };
   }
 
   async resetPassword(resetPasswordDto: ResetPasswordDto) {
@@ -298,16 +334,30 @@ export class AuthService {
       },
     });
 
-    // await this.auditService.logAction(user.id, 'PASSWORD_RESET', 'USER');
-
     return { message: 'Password reset successfully' };
   }
 
   private generateReferralCode(): string {
-    return Math.random().toString(36).substring(2, 10).toUpperCase();
+    return crypto.randomBytes(4).toString('hex').toUpperCase();
   }
 
   private generateResetToken(): string {
-    return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+    return crypto.randomBytes(32).toString('hex');
+  }
+
+  private parseExpirySeconds(expiresIn: string): number {
+    const match = /^(\d+)([smhd])$/.exec(expiresIn);
+    if (!match) {
+      return 3600;
+    }
+    const value = parseInt(match[1], 10);
+    const unit = match[2];
+    const multipliers: Record<string, number> = {
+      s: 1,
+      m: 60,
+      h: 3600,
+      d: 86400,
+    };
+    return value * (multipliers[unit] || 60);
   }
 }

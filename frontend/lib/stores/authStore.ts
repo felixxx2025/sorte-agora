@@ -1,3 +1,6 @@
+'use client';
+
+import { authApi } from '@/lib/api/auth';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
@@ -32,10 +35,18 @@ export const useAuthStore = create<AuthState>()(
       token: null,
       isAuthenticated: false,
       login: async (email: string, password: string) => {
-        // API call would go here
-        set({ isAuthenticated: true });
+        const data = await authApi.login({ email, password });
+        localStorage.setItem('accessToken', data.accessToken);
+        localStorage.setItem('refreshToken', data.refreshToken);
+        set({
+          user: data.user,
+          token: data.accessToken,
+          isAuthenticated: true,
+        });
       },
       logout: () => {
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
         set({ user: null, token: null, isAuthenticated: false });
       },
       setUser: (user) => set({ user }),

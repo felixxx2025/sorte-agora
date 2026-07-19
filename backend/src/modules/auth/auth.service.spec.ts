@@ -4,8 +4,9 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
 
-import { AuthService } from './auth.service';
+import { TokenBlacklistService } from '../../common/services/token-blacklist.service';
 import { PrismaService } from '../../database/prisma.service';
+import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 
 describe('AuthService', () => {
@@ -27,13 +28,23 @@ describe('AuthService', () => {
 
   const mockJwtService = {
     sign: jest.fn(),
+    verify: jest.fn(),
   };
 
   const mockConfigService = {
     get: jest.fn((key: string) => {
       if (key === 'JWT_REFRESH_EXPIRES_IN') return '7d';
+      if (key === 'JWT_EXPIRES_IN') return '15m';
+      if (key === 'NODE_ENV') return 'test';
+      if (key === 'FRONTEND_URL') return 'http://localhost:3000';
       return 'test-secret';
     }),
+  };
+
+  const mockTokenBlacklistService = {
+    addToBlacklist: jest.fn().mockResolvedValue(undefined),
+    isBlacklisted: jest.fn().mockResolvedValue(false),
+    removeFromBlacklist: jest.fn().mockResolvedValue(undefined),
   };
 
   beforeEach(async () => {
@@ -51,6 +62,10 @@ describe('AuthService', () => {
         {
           provide: ConfigService,
           useValue: mockConfigService,
+        },
+        {
+          provide: TokenBlacklistService,
+          useValue: mockTokenBlacklistService,
         },
       ],
     }).compile();
@@ -75,18 +90,21 @@ describe('AuthService', () => {
         lastName: 'Doe',
       };
 
+      mockPrismaService.user.findUnique.mockResolvedValue(null);
       mockPrismaService.user.create.mockResolvedValue({
         id: '1',
         email: 'test@example.com',
         firstName: 'John',
         lastName: 'Doe',
       });
-
       mockPrismaService.account.create.mockResolvedValue({});
+      mockPrismaService.user.update.mockResolvedValue({});
+      mockJwtService.sign.mockReturnValue('mock-token');
 
       const result = await service.register(registerDto);
 
       expect(result).toHaveProperty('user');
+      expect(result).toHaveProperty('accessToken');
       expect(result).toHaveProperty('message');
       expect(result.message).toBe('Registration successful');
       expect(mockPrismaService.user.create).toHaveBeenCalled();

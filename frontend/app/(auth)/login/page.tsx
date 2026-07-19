@@ -8,15 +8,16 @@ export default function LoginPage() {
   const login = useLogin();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
     try {
       await login.mutateAsync({ email, password });
       window.location.href = '/dashboard';
-    } catch (error) {
-      console.error('Login error:', error);
-      alert('Erro ao fazer login. Verifique suas credenciais.');
+    } catch {
+      setError('Erro ao fazer login. Verifique suas credenciais.');
     }
   };
 
@@ -66,6 +67,13 @@ export default function LoginPage() {
                 Esqueci minha senha
               </Link>
             </div>
+
+            {error && (
+              <p className="text-red-400 text-sm" role="alert">
+                {error}
+              </p>
+            )}
+
             <button
               type="submit"
               disabled={login.isPending}

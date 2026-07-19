@@ -15,11 +15,14 @@ export default function RegisterPage() {
     lastName: '',
   });
 
+  const [error, setError] = useState('');
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
 
     if (formData.password !== formData.confirmPassword) {
-      alert('As senhas não coincidem');
+      setError('As senhas não coincidem');
       return;
     }
 
@@ -32,9 +35,8 @@ export default function RegisterPage() {
         lastName: formData.lastName || undefined,
       });
       window.location.href = '/dashboard';
-    } catch (error) {
-      console.error('Register error:', error);
-      alert('Erro ao criar conta. Tente novamente.');
+    } catch {
+      setError('Erro ao criar conta. Tente novamente.');
     }
   };
 
@@ -53,6 +55,11 @@ export default function RegisterPage() {
 
         <div className="bg-[#16213E] rounded-lg p-6 border border-white/10">
           <form onSubmit={handleSubmit} className="space-y-4">
+            {error && (
+              <p className="text-red-400 text-sm" role="alert">
+                {error}
+              </p>
+            )}
             <div>
               <label className="block text-gray-300 text-sm mb-2">Email</label>
               <input

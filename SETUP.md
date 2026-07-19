@@ -10,49 +10,46 @@
 
 ## Quick Start (Docker)
 
-### 1. Clone the Repository
-```bash
-git clone https://github.com/your-org/sorte-agora.git
-cd sorte-agora
-```
-
-### 2. Configure Environment Variables
+### 1. Configure Environment Variables
 ```bash
 cp .env.example .env
 cp backend/.env.example backend/.env
 cp frontend/.env.local.example frontend/.env.local
+# Ajuste DATABASE_URL para localhost:5434 e REDIS_URL para localhost:6380 no modo híbrido
 ```
 
-Edit the `.env` files with your configuration:
-- Database credentials
-- JWT secrets
-- API keys for external services
-
-### 3. Start All Services
+### 2. Start database + cache
 ```bash
-docker-compose up -d
+docker compose up -d postgres redis
 ```
 
-This will start:
-- PostgreSQL (port 5432)
-- Redis (port 6379)
-- Backend API (port 3001)
-- Frontend (port 3000)
+Serviços locais (host):
+- PostgreSQL → **5434**
+- Redis → **6380**
+- (Compose completo também sobe API 3001, UI 8080, Jaeger, Prometheus, Grafana)
 
-### 4. Run Database Migrations
+### 3. Backend migrations + seed
 ```bash
-docker-compose exec backend npx prisma migrate dev
+cd backend
+npm install
+npx prisma migrate deploy
+npx prisma db seed
+npm run start:dev
 ```
 
-### 5. Seed Database (Optional)
+### 4. Frontend
 ```bash
-docker-compose exec backend npx prisma db seed
+cd frontend
+echo 'NEXT_PUBLIC_API_URL=http://localhost:3001/api' > .env.local
+npm install
+npm run dev
 ```
 
-### 6. Access the Application
+### 5. Access
 - Frontend: http://localhost:3000
 - Backend API: http://localhost:3001/api
-- API Documentation: http://localhost:3001/api/docs
+- API Docs: http://localhost:3001/api/docs
+- Contas seed: ver `STATUS.md`
 
 ## Manual Setup
 

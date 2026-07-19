@@ -1,11 +1,11 @@
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
+import { TokenBlacklistService } from '../../../common/services/token-blacklist.service';
 import { PrismaService } from '../../../database/prisma.service';
 import { JwtStrategy } from './jwt.strategy';
 
 describe('JwtStrategy', () => {
   let strategy: JwtStrategy;
-  let prismaService: PrismaService;
 
   const mockConfigService = {
     get: jest.fn((key: string) => {
@@ -20,6 +20,15 @@ describe('JwtStrategy', () => {
     },
   };
 
+  const mockTokenBlacklistService = {
+    isBlacklisted: jest.fn().mockResolvedValue(false),
+    addToBlacklist: jest.fn(),
+  };
+
+  const mockReq = {
+    headers: { authorization: 'Bearer mock-token' },
+  } as any;
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -32,13 +41,16 @@ describe('JwtStrategy', () => {
           provide: PrismaService,
           useValue: mockPrismaService,
         },
+        {
+          provide: TokenBlacklistService,
+          useValue: mockTokenBlacklistService,
+        },
       ],
     }).compile();
 
     strategy = module.get<JwtStrategy>(JwtStrategy);
-    prismaService = module.get<PrismaService>(PrismaService);
-
     jest.clearAllMocks();
+    mockTokenBlacklistService.isBlacklisted.mockResolvedValue(false);
   });
 
   it('should be defined', () => {
@@ -59,7 +71,7 @@ describe('JwtStrategy', () => {
 
       mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
 
-      const result = await strategy.validate(payload);
+      const result = await strategy.validate(mockReq, payload);
 
       expect(result).toBeDefined();
       expect(result.id).toBe('user1');
@@ -78,7 +90,7 @@ describe('JwtStrategy', () => {
 
       mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
 
-      await expect(strategy.validate(payload)).rejects.toThrow();
+      await expect(strategy.validate(mockReq, payload)).rejects.toThrow();
     });
 
     it('should throw UnauthorizedException for banned user', async () => {
@@ -93,7 +105,14 @@ describe('JwtStrategy', () => {
 
       mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
 
-      await expect(strategy.validate(payload)).rejects.toThrow();
+      await expect(strategy.validate(mockReq, payload)).rejects.toThrow();
+    });
+
+    it('should throw for blacklisted token', async () => {
+      mockTokenBlacklistService.isBlacklisted.mockResolvedValue(true);
+      await expect(
+        strategy.validate(mockReq, { sub: 'user1' }),
+      ).rejects.toThrow();
     });
   });
 });

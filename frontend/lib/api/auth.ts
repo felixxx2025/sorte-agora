@@ -30,7 +30,7 @@ export const ForgotPasswordSchema = z.object({
 
 export const ResetPasswordSchema = z.object({
   token: z.string(),
-  password: z.string().min(8),
+  newPassword: z.string().min(8),
 });
 
 // Types
@@ -82,7 +82,8 @@ export const authApi = {
   },
 
   async refresh(): Promise<{ accessToken: string }> {
-    const response = await apiClient.post('/auth/refresh');
+    const refreshToken = localStorage.getItem('refreshToken');
+    const response = await apiClient.post('/auth/refresh', { refreshToken });
     return response.data;
   },
 
@@ -108,11 +109,13 @@ export const authApi = {
     return response.data;
   },
 
-  async forgotPassword(data: ForgotPasswordInput): Promise<void> {
-    await apiClient.post('/auth/forgot-password', data);
+  async forgotPassword(data: ForgotPasswordInput): Promise<{ message: string; resetToken?: string }> {
+    const response = await apiClient.post('/auth/forgot-password', data);
+    return response.data;
   },
 
-  async resetPassword(data: ResetPasswordInput): Promise<void> {
-    await apiClient.post('/auth/reset-password', data);
+  async resetPassword(data: ResetPasswordInput): Promise<{ message: string }> {
+    const response = await apiClient.post('/auth/reset-password', data);
+    return response.data;
   },
 };

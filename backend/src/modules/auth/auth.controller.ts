@@ -2,15 +2,18 @@ import { Body, Controller, Get, Post, Request, UseGuards } from '@nestjs/common'
 import { AuthGuard } from '@nestjs/passport';
 import { Throttle } from '@nestjs/throttler';
 import { Public } from '../../common/decorators/public.decorator';
+import { JwtAuthGuard } from '../../common/guards/auth.guard';
 import { AuthService } from './auth.service';
 import { EnableMfaDto } from './dto/enable-mfa.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { LoginDto } from './dto/login.dto';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { RegisterDto } from './dto/register.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { VerifyMfaDto } from './dto/verify-mfa.dto';
 
 @Controller('auth')
+@UseGuards(JwtAuthGuard)
 export class AuthController {
   constructor(private authService: AuthService) { }
 
@@ -25,7 +28,7 @@ export class AuthController {
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   @UseGuards(AuthGuard('local'))
   @Post('login')
-  async login(@Request() req, @Body() loginDto: LoginDto) {
+  async login(@Request() req, @Body() _loginDto: LoginDto) {
     return this.authService.login(req.user);
   }
 
@@ -34,9 +37,11 @@ export class AuthController {
     return req.user;
   }
 
+  @Public()
+  @Throttle({ default: { limit: 20, ttl: 60000 } })
   @Post('refresh')
-  async refresh(@Request() req) {
-    return this.authService.refresh(req.user);
+  async refresh(@Body() refreshTokenDto: RefreshTokenDto) {
+    return this.authService.refresh(refreshTokenDto.refreshToken);
   }
 
   @Post('logout')
@@ -73,6 +78,7 @@ export class AuthController {
   }
 
   @Public()
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Post('reset-password')
   async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
     return this.authService.resetPassword(resetPasswordDto);

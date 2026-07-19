@@ -1,30 +1,42 @@
 import axios from 'axios';
 
+const apiBase =
+  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+
 const apiClient = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api',
+  baseURL: apiBase.endsWith('/api') ? apiBase : `${apiBase.replace(/\/$/, '')}/api`,
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// Request interceptor
 apiClient.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('accessToken');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('accessToken');
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
     }
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
-// Response interceptor
 apiClient.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // Backend TransformInterceptor: { success, data, timestamp, path }
+    if (
+      response.data &&
+      typeof response.data === 'object' &&
+      'success' in response.data &&
+      'data' in response.data
+    ) {
+      response.data = response.data.data;
+    }
+    return response;
+  },
   async (error) => {
     const originalRequest = error.config;
 
@@ -33,12 +45,17 @@ apiClient.interceptors.response.use(
 
       try {
         const refreshToken = localStorage.getItem('refreshToken');
-        const response = await axios.post(
-          `${process.env.NEXT_PUBLIC_API_URL}/api/auth/refresh`,
-          { refreshToken }
-        );
+        if (!refreshToken) {
+          throw new Error('No refresh token');
+        }
 
-        const { accessToken } = response.data;
+        const base = apiClient.defaults.baseURL || 'http://localhost:3001/api';
+        const response = await axios.post(`${base}/auth/refresh`, {
+          refreshToken,
+        });
+
+        const payload = response.data?.data || response.data;
+        const accessToken = payload.accessToken;
         localStorage.setItem('accessToken', accessToken);
 
         originalRequest.headers.Authorization = `Bearer ${accessToken}`;
@@ -46,7 +63,9 @@ apiClient.interceptors.response.use(
       } catch (refreshError) {
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
-        window.location.href = '/login';
+        if (typeof window !== 'undefined') {
+          window.location.href = '/login';
+        }
         return Promise.reject(refreshError);
       }
     }
