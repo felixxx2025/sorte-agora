@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.3.0-faseC] — 2026-07-19
+
+### Added
+- E2E 15 cenários + workflow CI Playwright com API
+- Vitest no frontend; `smoke-security.sh`; FeatureFlags no health
+- `docs/RUNBOOK.md` operacional (PIX, cassino, settlement, LGPD)
+
+### Status
+Maturidade ~88/100 — staging comercial ready; secrets/providers reais no ambiente alvo.
+
 ## [1.2.0-faseB] — 2026-07-19
 
 ### Added

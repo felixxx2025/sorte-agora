@@ -1,0 +1,49 @@
+import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+
+/**
+ * Feature flags via env (Fase C).
+ * ENABLE_CASINO / ENABLE_SPORTS / ENABLE_VIP / ENABLE_AFFILIATES / ENABLE_LGPD
+ */
+@Injectable()
+export class FeatureFlagsService {
+  constructor(private config: ConfigService) {}
+
+  private flag(key: string, defaultOn = true): boolean {
+    const v = this.config.get(key);
+    if (v === undefined || v === null || v === '') return defaultOn;
+    return String(v).toLowerCase() !== 'false' && v !== '0';
+  }
+
+  get casino() {
+    return this.flag('ENABLE_CASINO');
+  }
+
+  get sports() {
+    return this.flag('ENABLE_SPORTS');
+  }
+
+  get vip() {
+    return this.flag('ENABLE_VIP');
+  }
+
+  get affiliates() {
+    return this.flag('ENABLE_AFFILIATES');
+  }
+
+  get lgpd() {
+    return this.flag('ENABLE_LGPD', true);
+  }
+
+  snapshot() {
+    return {
+      casino: this.casino,
+      sports: this.sports,
+      vip: this.vip,
+      affiliates: this.affiliates,
+      lgpd: this.lgpd,
+      pixAutoConfirm: this.config.get('PIX_AUTO_CONFIRM') === 'true',
+      casinoMode: this.config.get('CASINO_PROVIDER_MODE') || 'demo',
+    };
+  }
+}

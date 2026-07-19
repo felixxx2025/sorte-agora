@@ -4,13 +4,18 @@
 
 | Campo | Valor |
 |-------|-------|
-| **Versão** | 1.2.0-faseB |
-| **Fase atual** | **Fase B — Implementação concluída** |
-| **Maturidade** | ~85/100 (ver `GO_LIVE.md`) |
+| **Versão** | 1.3.0-faseC |
+| **Fase atual** | **Fase C — Fechamento / staging ready** |
+| **Maturidade** | ~88/100 (ver `GO_LIVE.md`) |
 | **Domínio** | Apostas (cassino + esportes) — **não** rifas |
 | **Última atualização** | 19 de julho de 2026 |
 
 > Documentos antigos que afirmam “92/100 pronto para produção” estão **desatualizados**. A fonte de verdade é [`STATUS.md`](./STATUS.md).
+
+## O que a Fase C entregou
+
+- E2E **15/15**, Vitest FE, security smoke, CI e2e, feature flags, RUNBOOK
+- Testes: **94** unit BE + **5** FE — `docs/test-results/fase-C.md`
 
 ## O que a Fase B entregou
 

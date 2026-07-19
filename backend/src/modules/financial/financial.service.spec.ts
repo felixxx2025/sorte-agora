@@ -241,23 +241,50 @@ describe('FinancialService', () => {
     });
   });
 
-  describe('getTransactions', () => {
-    it('should return user transactions', async () => {
-      const mockTransactions = [
-        { id: '1', type: 'DEPOSIT', amount: 500, status: 'COMPLETED' },
-        { id: '2', type: 'WITHDRAWAL', amount: 200, status: 'COMPLETED' },
-      ];
-
-      mockPrismaService.transaction.findMany.mockResolvedValue(mockTransactions);
-
-      const result = await service.getTransactions('user1');
-
-      expect(result).toHaveLength(2);
-      expect(mockPrismaService.transaction.findMany).toHaveBeenCalledWith({
-        where: { userId: 'user1' },
-        orderBy: { createdAt: 'desc' },
-        take: 50,
+  describe('confirmByExternalId', () => {
+    it('is idempotent when already COMPLETED', async () => {
+      mockPrismaService.transaction.findFirst.mockResolvedValue({
+        id: 'tx1',
+        userId: 'u1',
+        accountId: 'a1',
+        amount: 50,
+        status: 'COMPLETED',
+        externalId: 'pix_abc',
       });
+
+      const result = await service.confirmByExternalId('pix_abc');
+      expect(result.idempotent).toBe(true);
+      expect(result.status).toBe('COMPLETED');
+      expect(mockPrismaService.$transaction).not.toHaveBeenCalled();
+    });
+
+    it('credits PENDING deposit via webhook path', async () => {
+      mockPrismaService.transaction.findFirst.mockResolvedValue({
+        id: 'tx1',
+        userId: 'u1',
+        accountId: 'a1',
+        amount: 50,
+        status: 'PENDING',
+        externalId: 'pix_abc',
+      });
+      mockPrismaService.$transaction.mockImplementation(async (cb) =>
+        cb({
+          transaction: {
+            update: jest.fn().mockResolvedValue({
+              id: 'tx1',
+              externalId: 'pix_abc',
+              status: 'COMPLETED',
+            }),
+          },
+          account: {
+            update: jest.fn().mockResolvedValue({ balance: 1050 }),
+          },
+        }),
+      );
+
+      const result = await service.confirmByExternalId('pix_abc');
+      expect(result.status).toBe('COMPLETED');
+      expect(result.idempotent).toBe(false);
     });
   });
 });

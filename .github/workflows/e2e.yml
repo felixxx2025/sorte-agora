@@ -1,0 +1,96 @@
+name: E2E Playwright
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: sorteagora
+          POSTGRES_PASSWORD: sorteagora123
+          POSTGRES_DB: sorte_agora
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U sorteagora"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+
+      - name: Backend install + migrate + seed
+        working-directory: ./backend
+        env:
+          DATABASE_URL: postgresql://sorteagora:sorteagora123@localhost:5432/sorte_agora?schema=public
+          REDIS_URL: redis://localhost:6379
+          JWT_SECRET: ci-jwt-secret-at-least-32-characters-long
+          ENCRYPTION_KEY: ci-encryption-key-32chars-minimum!!
+          PIX_AUTO_CONFIRM: 'true'
+          CORS_ORIGIN: http://localhost:3010
+          FRONTEND_URL: http://localhost:3010
+          NODE_ENV: development
+        run: |
+          npm ci
+          npx prisma generate
+          npx prisma migrate deploy
+          npx prisma db seed || npx ts-node prisma/seed.ts
+
+      - name: Start backend
+        working-directory: ./backend
+        env:
+          DATABASE_URL: postgresql://sorteagora:sorteagora123@localhost:5432/sorte_agora?schema=public
+          REDIS_URL: redis://localhost:6379
+          JWT_SECRET: ci-jwt-secret-at-least-32-characters-long
+          ENCRYPTION_KEY: ci-encryption-key-32chars-minimum!!
+          PIX_AUTO_CONFIRM: 'true'
+          CORS_ORIGIN: http://localhost:3010
+          FRONTEND_URL: http://localhost:3010
+          PORT: 3001
+          NODE_ENV: development
+        run: |
+          npm run build
+          npm run start:prod &
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:3001/api/health && break
+            sleep 2
+          done
+
+      - name: Frontend install + Playwright
+        working-directory: ./frontend
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:3001/api
+          E2E_API: '1'
+          E2E_PORT: '3010'
+          CI: 'true'
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+          npx playwright test --project=chromium

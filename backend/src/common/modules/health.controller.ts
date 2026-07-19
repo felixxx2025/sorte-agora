@@ -5,12 +5,16 @@ import {
   Res,
 } from '@nestjs/common';
 import { Response } from 'express';
-import { Public } from '../decorators/public.decorator';
 import { PrismaService } from '../../database/prisma.service';
+import { Public } from '../decorators/public.decorator';
+import { FeatureFlagsService } from '../services/feature-flags.service';
 
 @Controller('health')
 export class HealthController {
-  constructor(private prisma: PrismaService) { }
+  constructor(
+    private prisma: PrismaService,
+    private features: FeatureFlagsService,
+  ) { }
 
   @Public()
   @Get()
@@ -20,6 +24,7 @@ export class HealthController {
       return {
         status: 'ok',
         database: 'connected',
+        features: this.features.snapshot(),
         timestamp: new Date().toISOString(),
       };
     } catch {
