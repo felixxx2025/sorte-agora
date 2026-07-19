@@ -1,4 +1,8 @@
-import { Injectable } from "@nestjs/common";
+import {
+  BadRequestException,
+  Injectable,
+  ServiceUnavailableException,
+} from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import * as crypto from "crypto";
 import {
@@ -9,7 +13,7 @@ import {
 
 /**
  * Adapter HTTP live — monta URL assinada do provedor.
- * Requer CASINO_PROVIDER_BASE_URL (+ opcional CASINO_PROVIDER_API_KEY).
+ * Exige CASINO_PROVIDER_BASE_URL. API key obrigatória se CASINO_REQUIRE_API_KEY=true.
  */
 @Injectable()
 export class LiveCasinoProvider implements CasinoProvider {
@@ -18,10 +22,20 @@ export class LiveCasinoProvider implements CasinoProvider {
   constructor(private config: ConfigService) {}
 
   async launch(request: CasinoLaunchRequest): Promise<CasinoLaunchResult> {
-    const base =
-      this.config.get("CASINO_PROVIDER_BASE_URL") ||
-      "https://demo-casino.sorteagora.local";
+    const base = (this.config.get("CASINO_PROVIDER_BASE_URL") || "").trim();
+    if (!base) {
+      throw new ServiceUnavailableException(
+        "CASINO_PROVIDER_BASE_URL required for live mode",
+      );
+    }
+
     const apiKey = this.config.get("CASINO_PROVIDER_API_KEY") || "";
+    if (this.config.get("CASINO_REQUIRE_API_KEY") === "true" && !apiKey) {
+      throw new BadRequestException(
+        "CASINO_PROVIDER_API_KEY required when CASINO_REQUIRE_API_KEY=true",
+      );
+    }
+
     const { game, sessionToken, userId } = request;
 
     const qs = new URLSearchParams({

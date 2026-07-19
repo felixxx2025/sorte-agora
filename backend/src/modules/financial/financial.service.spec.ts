@@ -22,6 +22,7 @@ describe("FinancialService", () => {
       create: jest.fn(),
       findMany: jest.fn(),
       findFirst: jest.fn(),
+      findUnique: jest.fn(),
       update: jest.fn(),
       aggregate: jest.fn().mockResolvedValue({ _sum: { amount: 0 } }),
     },
@@ -48,6 +49,11 @@ describe("FinancialService", () => {
       qrCode: "data:image/png;base64,xx",
       providerRef: "sandbox",
       expiresAt: new Date(),
+    }),
+    createPayout: jest.fn().mockResolvedValue({
+      externalId: "payout_test_1",
+      providerRef: "sandbox",
+      status: "COMPLETED",
     }),
     parseWebhook: jest.fn(),
   };
@@ -296,6 +302,55 @@ describe("FinancialService", () => {
       const result = await service.confirmByExternalId("pix_abc");
       expect(result.status).toBe("COMPLETED");
       expect(result.idempotent).toBe(false);
+    });
+  });
+
+  describe("approveWithdrawal", () => {
+    it("completes payout via sandbox provider", async () => {
+      mockPrismaService.transaction.findUnique.mockResolvedValue({
+        id: "w1",
+        userId: "u1",
+        accountId: "a1",
+        amount: 100,
+        type: "WITHDRAWAL",
+        status: "PENDING",
+        pixKey: "user@pix",
+      });
+      mockPrismaService.$transaction.mockImplementation(async (cb) =>
+        cb({
+          transaction: { update: jest.fn().mockResolvedValue({}) },
+          account: { update: jest.fn().mockResolvedValue({}) },
+        }),
+      );
+
+      const result = await service.approveWithdrawal("w1");
+      expect(result.status).toBe("COMPLETED");
+      expect(mockPixProvider.createPayout).toHaveBeenCalled();
+    });
+
+    it("marks PROCESSING when provider is async", async () => {
+      mockPixProvider.createPayout.mockResolvedValueOnce({
+        externalId: "payout_async",
+        status: "PROCESSING",
+      });
+      mockPrismaService.transaction.findUnique.mockResolvedValue({
+        id: "w1",
+        userId: "u1",
+        accountId: "a1",
+        amount: 100,
+        type: "WITHDRAWAL",
+        status: "PENDING",
+        pixKey: "user@pix",
+      });
+      mockPrismaService.transaction.update.mockResolvedValue({});
+
+      const result = await service.approveWithdrawal("w1");
+      expect(result.status).toBe("PROCESSING");
+      expect(mockPrismaService.transaction.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ status: "PROCESSING" }),
+        }),
+      );
     });
   });
 });

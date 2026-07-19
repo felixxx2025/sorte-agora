@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  Inject,
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
@@ -8,6 +9,7 @@ import { PrismaService } from "../../database/prisma.service";
 import { AffiliatesService } from "../affiliates/affiliates.service";
 import { VipService } from "../vip/vip.service";
 import { PlaceBetDto } from "./dto/place-bet.dto";
+import { ODDS_PROVIDER, OddsProvider } from "./providers/odds-provider.interface";
 
 @Injectable()
 export class SportsService {
@@ -16,12 +18,15 @@ export class SportsService {
     private vipService: VipService,
     private cache: CacheService,
     private affiliatesService: AffiliatesService,
+    @Inject(ODDS_PROVIDER) private oddsProvider: OddsProvider,
   ) {}
 
   async getEvents(isLive: boolean = false) {
     const cacheKey = `sports:events:live=${isLive}`;
     const cached = await this.cache.getJson<any[]>(cacheKey);
     if (cached) return cached;
+
+    await this.maybeRefreshOdds();
 
     const events = await this.prisma.sportsEvent.findMany({
       where: isLive ? { isLive: true } : undefined,
@@ -236,6 +241,29 @@ export class SportsService {
       });
     } catch {
       // Comissão não deve quebrar o settlement
+    }
+  }
+
+  /** Atualiza odds no DB se o feed HTTP retornar cotações com selectionId. */
+  private async maybeRefreshOdds() {
+    try {
+      const quotes = await this.oddsProvider.fetchQuotes();
+      if (!quotes.length) return;
+      await Promise.all(
+        quotes
+          .filter((q) => q.selectionId && q.odds > 1)
+          .slice(0, 100)
+          .map((q) =>
+            this.prisma.sportsSelection.update({
+              where: { id: q.selectionId! },
+              data: { odds: q.odds },
+            }).catch(() => null),
+          ),
+      );
+      await this.cache.del("sports:events:live=false");
+      await this.cache.del("sports:events:live=true");
+    } catch {
+      // Feed opcional — não quebra listagem
     }
   }
 }

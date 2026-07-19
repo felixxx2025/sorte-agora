@@ -43,7 +43,9 @@ export class FeatureFlagsService {
       affiliates: this.affiliates,
       lgpd: this.lgpd,
       pixAutoConfirm: this.config.get("PIX_AUTO_CONFIRM") === "true",
+      pixProviderMode: this.config.get("PIX_PROVIDER_MODE") || "sandbox",
       casinoMode: this.config.get("CASINO_PROVIDER_MODE") || "demo",
+      sportsOddsMode: this.config.get("SPORTS_ODDS_MODE") || "static",
     };
   }
 }

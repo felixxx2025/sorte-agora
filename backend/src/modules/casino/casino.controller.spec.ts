@@ -1,11 +1,11 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { JwtAuthGuard } from "../../common/guards/auth.guard";
+import { FeatureFlagsService } from "../../common/services/feature-flags.service";
 import { CasinoController } from "./casino.controller";
 import { CasinoService } from "./casino.service";
 
 describe("CasinoController", () => {
   let controller: CasinoController;
-  let casinoService: CasinoService;
 
   const mockCasinoService = {
     getGames: jest.fn(),
@@ -13,6 +13,8 @@ describe("CasinoController", () => {
     launchGame: jest.fn(),
     getSessions: jest.fn(),
   };
+
+  const mockFlags = { casino: true };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -22,6 +24,10 @@ describe("CasinoController", () => {
           provide: CasinoService,
           useValue: mockCasinoService,
         },
+        {
+          provide: FeatureFlagsService,
+          useValue: mockFlags,
+        },
       ],
     })
       .overrideGuard(JwtAuthGuard)
@@ -29,9 +35,8 @@ describe("CasinoController", () => {
       .compile();
 
     controller = module.get<CasinoController>(CasinoController);
-    casinoService = module.get<CasinoService>(CasinoService);
-
     jest.clearAllMocks();
+    mockFlags.casino = true;
   });
 
   it("should be defined", () => {

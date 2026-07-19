@@ -295,6 +295,223 @@ export class FinancialService {
       transactionId: result.id,
       amount: withdrawDto.amount,
       status: "PENDING",
+      provider: this.pixProvider.name,
+    };
+  }
+
+  /**
+   * Aprova saque PENDING: dispara payout no PSP e conclui ou deixa PROCESSING.
+   */
+  async approveWithdrawal(transactionId: string) {
+    const transaction = await this.prisma.transaction.findUnique({
+      where: { id: transactionId },
+    });
+
+    if (!transaction) {
+      throw new NotFoundException("Transaction not found");
+    }
+    if (transaction.type !== "WITHDRAWAL") {
+      throw new BadRequestException("Not a withdrawal");
+    }
+    if (transaction.status !== "PENDING") {
+      throw new BadRequestException(
+        `Cannot approve withdrawal with status ${transaction.status}`,
+      );
+    }
+    if (!transaction.pixKey) {
+      throw new BadRequestException("Withdrawal missing pixKey");
+    }
+
+    const payout = await this.pixProvider.createPayout({
+      amount: Number(transaction.amount),
+      userId: transaction.userId,
+      pixKey: transaction.pixKey,
+      transactionId: transaction.id,
+    });
+
+    if (payout.status === "FAILED") {
+      await this.prisma.$transaction(async (tx) => {
+        await tx.transaction.update({
+          where: { id: transaction.id },
+          data: {
+            status: "FAILED",
+            externalId: payout.externalId,
+            providerRef: payout.providerRef || this.pixProvider.name,
+            processedAt: new Date(),
+          },
+        });
+        await tx.account.update({
+          where: { id: transaction.accountId },
+          data: {
+            lockedBalance: { decrement: transaction.amount },
+            balance: { increment: transaction.amount },
+          },
+        });
+      });
+      return {
+        message: "Withdrawal payout failed — funds returned",
+        status: "FAILED",
+        externalId: payout.externalId,
+        provider: this.pixProvider.name,
+      };
+    }
+
+    if (payout.status === "PROCESSING") {
+      await this.prisma.transaction.update({
+        where: { id: transaction.id },
+        data: {
+          status: "PROCESSING",
+          externalId: payout.externalId,
+          providerRef: payout.providerRef || this.pixProvider.name,
+        },
+      });
+      return {
+        message: "Withdrawal submitted to PSP — awaiting webhook",
+        status: "PROCESSING",
+        externalId: payout.externalId,
+        provider: this.pixProvider.name,
+      };
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.transaction.update({
+        where: { id: transaction.id },
+        data: {
+          status: "COMPLETED",
+          externalId: payout.externalId,
+          providerRef: payout.providerRef || this.pixProvider.name,
+          processedAt: new Date(),
+        },
+      });
+      await tx.account.update({
+        where: { id: transaction.accountId },
+        data: {
+          lockedBalance: { decrement: transaction.amount },
+        },
+      });
+    });
+
+    return {
+      message: "Withdrawal approved",
+      status: "COMPLETED",
+      externalId: payout.externalId,
+      provider: this.pixProvider.name,
+    };
+  }
+
+  async rejectWithdrawal(transactionId: string) {
+    const transaction = await this.prisma.transaction.findUnique({
+      where: { id: transactionId },
+    });
+
+    if (!transaction) {
+      throw new NotFoundException("Transaction not found");
+    }
+    if (transaction.type !== "WITHDRAWAL") {
+      throw new BadRequestException("Not a withdrawal");
+    }
+    if (!["PENDING", "PROCESSING"].includes(transaction.status)) {
+      throw new BadRequestException(
+        `Cannot reject withdrawal with status ${transaction.status}`,
+      );
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.transaction.update({
+        where: { id: transactionId },
+        data: {
+          status: "FAILED",
+          processedAt: new Date(),
+        },
+      });
+      await tx.account.update({
+        where: { id: transaction.accountId },
+        data: {
+          lockedBalance: { decrement: transaction.amount },
+          balance: { increment: transaction.amount },
+        },
+      });
+    });
+
+    return { message: "Withdrawal rejected", status: "FAILED" };
+  }
+
+  /**
+   * Webhook de payout: COMPLETED libera lock; FAILED devolve saldo.
+   */
+  async confirmPayoutByExternalId(
+    externalId: string,
+    outcome: "COMPLETED" | "FAILED",
+  ) {
+    const transaction = await this.prisma.transaction.findFirst({
+      where: { externalId, type: "WITHDRAWAL" },
+    });
+
+    if (!transaction) {
+      throw new NotFoundException("Payout not found for externalId");
+    }
+
+    if (transaction.status === "COMPLETED" && outcome === "COMPLETED") {
+      return {
+        transactionId: transaction.id,
+        externalId,
+        status: "COMPLETED",
+        idempotent: true,
+      };
+    }
+    if (transaction.status === "FAILED" && outcome === "FAILED") {
+      return {
+        transactionId: transaction.id,
+        externalId,
+        status: "FAILED",
+        idempotent: true,
+      };
+    }
+
+    if (!["PENDING", "PROCESSING"].includes(transaction.status)) {
+      throw new BadRequestException(
+        `Cannot settle payout with status ${transaction.status}`,
+      );
+    }
+
+    if (outcome === "COMPLETED") {
+      await this.prisma.$transaction(async (tx) => {
+        await tx.transaction.update({
+          where: { id: transaction.id },
+          data: { status: "COMPLETED", processedAt: new Date() },
+        });
+        await tx.account.update({
+          where: { id: transaction.accountId },
+          data: { lockedBalance: { decrement: transaction.amount } },
+        });
+      });
+      return {
+        transactionId: transaction.id,
+        externalId,
+        status: "COMPLETED",
+        idempotent: false,
+      };
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.transaction.update({
+        where: { id: transaction.id },
+        data: { status: "FAILED", processedAt: new Date() },
+      });
+      await tx.account.update({
+        where: { id: transaction.accountId },
+        data: {
+          lockedBalance: { decrement: transaction.amount },
+          balance: { increment: transaction.amount },
+        },
+      });
+    });
+
+    return {
+      transactionId: transaction.id,
+      externalId,
+      status: "FAILED",
+      idempotent: false,
     };
   }
 
@@ -335,7 +552,7 @@ export class FinancialService {
       where: {
         userId,
         type,
-        status: { in: ["PENDING", "COMPLETED"] },
+        status: { in: ["PENDING", "PROCESSING", "COMPLETED"] },
         createdAt: { gte: start },
       },
       _sum: { amount: true },

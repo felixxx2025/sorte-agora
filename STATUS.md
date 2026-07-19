@@ -1,8 +1,8 @@
 # STATUS — SORTE AGORA
 
-**Atualizado:** 19 de julho de 2026 (Fase D1 — Correção & Endurecimento)  
-**Maturidade geral estimada:** ~91/100  
-**Estado:** staging endurecido — MFA no login, secrets Compose sem default fraco, ThrottlerGuard global
+**Atualizado:** 19 de julho de 2026 (Fase D2 — PIX/providers)  
+**Maturidade geral estimada:** ~93/100  
+**Estado:** adapters PIX HTTP + payout; casino live exige BASE_URL; odds feed opcional
 
 ## Fases
 
@@ -14,26 +14,26 @@
 | A — Integração & Correção | ✅ |
 | B — Implementação (PIX/provider/LGPD) | ✅ |
 | C — Testes & go-live staging | ✅ |
-| **D1 — Correção & Endurecimento** | ✅ |
-| D2 — PIX/providers reais | ⏳ |
+| D1 — Correção & Endurecimento | ✅ |
+| **D2 — PIX/providers reais** | ✅ |
 | D3 — Padronizar & estabilizar | ⏳ |
 
-## Score por módulo (pós Fase D1)
+## Score por módulo (pós Fase D2)
 
 | Módulo | Score | Notas |
 |--------|------:|-------|
-| Auth / MFA / reset | 93 | MFA no login + age gate 18+ + self-exclude |
+| Auth / MFA / reset | 93 | D1 |
 | KYC | 82 | Storage local/MinIO |
-| Financeiro | 88 | Webhook + limites; payout PSP ainda D2 |
-| Cassino | 80 | Demo/live adapter |
-| Sports + settlement | 88 | Cron + flags |
+| Financeiro | 93 | HttpPix + payout PROCESSING/webhook |
+| Cassino | 86 | live exige BASE_URL; ENABLE_CASINO |
+| Sports + settlement | 90 | Odds HTTP opcional |
 | VIP | 80 | — |
 | Afiliados | 78 | — |
-| Admin UI | 88 | E2E coberto |
-| LGPD / Trust | 86 | `/responsible` `/support` + export |
-| Infra / CI | 90 | ESLint BE; audit critical; Next 14.2.35 |
-| Testes | 90 | 95 unit BE + 5 FE + E2E 17 + smokes |
-| Docs | 90 | RUNBOOK + GO_LIVE + fase-D1 |
+| Admin UI | 88 | Approve via FinancialService |
+| LGPD / Trust | 86 | — |
+| Infra / CI | 90 | Compose com env PIX/CASINO/SPORTS |
+| Testes | 92 | 102 unit BE + 5 FE + E2E 17 + smokes |
+| Docs | 90 | fase-D2 + GO_LIVE |
 
 ## Contas seed
 
@@ -43,3 +43,9 @@
 ## Portas
 
 Postgres **5434**, Redis **6380**, API **3001**, FE **3000**/Compose **8080**, E2E **3010**.
+
+## PIX staging
+
+- `PIX_PROVIDER_MODE=sandbox|http`
+- `PIX_AUTO_CONFIRM=false` + `PIX_WEBHOOK_SECRET`
+- Payout: approve → COMPLETED (sandbox) ou PROCESSING + webhook `kind=PAYOUT`

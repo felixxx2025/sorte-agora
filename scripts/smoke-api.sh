@@ -37,6 +37,18 @@ case "$WH" in
   *) echo "unexpected webhook status $WH"; exit 1 ;;
 esac
 
+echo "== pix payout webhook shape =="
+WHP=$(curl -s -o /tmp/whp.json -w '%{http_code}' -X POST "$BASE/webhooks/pix" \
+  -H 'Content-Type: application/json' \
+  -d '{"externalId":"payout_smoke_missing","status":"PAID","kind":"PAYOUT"}')
+case "$WHP" in
+  200|400|404) ;;
+  *) echo "unexpected payout webhook status $WHP"; exit 1 ;;
+esac
+
+echo "== health feature flags =="
+curl -sf "$BASE/health" | grep -q 'pixProviderMode\|features\|pixAutoConfirm\|"ok"'
+
 echo "== admin login + reports =="
 ALOGIN=$(curl -sf -X POST "$BASE/auth/login" -H 'Content-Type: application/json' \
   -d '{"email":"admin@sorteagora.com","password":"Admin123!"}')

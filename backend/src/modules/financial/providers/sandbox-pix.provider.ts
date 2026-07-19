@@ -3,6 +3,8 @@ import * as crypto from "crypto";
 import {
   PixChargeRequest,
   PixChargeResult,
+  PixPayoutRequest,
+  PixPayoutResult,
   PixProvider,
   PixWebhookPayload,
 } from "./pix-provider.interface";
@@ -10,6 +12,7 @@ import {
 /**
  * Provider sandbox — gera payload PIX simulado.
  * Em staging com webhook: PIX_AUTO_CONFIRM=false e POST /webhooks/pix.
+ * Payout sandbox completa de imediato (sem PSP).
  */
 @Injectable()
 export class SandboxPixProvider implements PixProvider {
@@ -29,6 +32,16 @@ export class SandboxPixProvider implements PixProvider {
     };
   }
 
+  async createPayout(request: PixPayoutRequest): Promise<PixPayoutResult> {
+    const externalId = `payout_${crypto.randomBytes(10).toString("hex")}`;
+    return {
+      externalId,
+      providerRef: this.name,
+      status: "COMPLETED",
+      message: `Sandbox payout to ${request.pixKey}`,
+    };
+  }
+
   parseWebhook(
     body: unknown,
     _headers?: Record<string, string>,
@@ -44,11 +57,20 @@ export class SandboxPixProvider implements PixProvider {
         ? "EXPIRED"
         : statusRaw === "CANCELLED" || statusRaw === "CANCELED"
           ? "CANCELLED"
-          : "PAID";
+          : statusRaw === "FAILED"
+            ? "FAILED"
+            : "PAID";
+
+    const kindRaw = String(data.kind || data.type || "").toUpperCase();
+    const kind =
+      kindRaw === "PAYOUT" || externalId.startsWith("payout_")
+        ? "PAYOUT"
+        : "CHARGE";
 
     return {
       externalId,
       status,
+      kind,
       providerRef: String(data.providerRef || this.name),
       raw: body,
     };

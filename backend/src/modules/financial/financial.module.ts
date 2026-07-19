@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from "@nestjs/config";
 import { AffiliatesModule } from "../affiliates/affiliates.module";
 import { FinancialController } from "./financial.controller";
 import { FinancialService } from "./financial.service";
+import { HttpPixProvider } from "./providers/http-pix.provider";
 import { PIX_PROVIDER } from "./providers/pix-provider.interface";
 import { SandboxPixProvider } from "./providers/sandbox-pix.provider";
 import { WebhooksController } from "./webhooks.controller";
@@ -13,10 +14,18 @@ import { WebhooksController } from "./webhooks.controller";
   providers: [
     FinancialService,
     SandboxPixProvider,
+    HttpPixProvider,
     {
       provide: PIX_PROVIDER,
-      useFactory: (sandbox: SandboxPixProvider) => sandbox,
-      inject: [SandboxPixProvider],
+      useFactory: (
+        config: ConfigService,
+        sandbox: SandboxPixProvider,
+        http: HttpPixProvider,
+      ) => {
+        const mode = (config.get("PIX_PROVIDER_MODE") || "sandbox").toLowerCase();
+        return mode === "http" || mode === "mercadopago" ? http : sandbox;
+      },
+      inject: [ConfigService, SandboxPixProvider, HttpPixProvider],
     },
   ],
   exports: [FinancialService],

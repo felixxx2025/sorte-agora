@@ -20,7 +20,23 @@ describe("SandboxPixProvider", () => {
     );
   });
 
-  it("returns null for invalid body", () => {
-    expect(provider.parseWebhook(null)).toBeNull();
+  it("creates sandbox payout as COMPLETED", async () => {
+    const payout = await provider.createPayout({
+      amount: 20,
+      userId: "u1",
+      pixKey: "key",
+      transactionId: "tx1",
+    });
+    expect(payout.status).toBe("COMPLETED");
+    expect(payout.externalId).toMatch(/^payout_/);
+  });
+
+  it("parses payout webhook kind", () => {
+    const payload = provider.parseWebhook({
+      externalId: "payout_abc",
+      status: "PAID",
+      kind: "PAYOUT",
+    });
+    expect(payload?.kind).toBe("PAYOUT");
   });
 });

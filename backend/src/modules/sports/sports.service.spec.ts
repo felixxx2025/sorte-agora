@@ -3,6 +3,7 @@ import { CacheService } from "../../common/services/cache.service";
 import { PrismaService } from "../../database/prisma.service";
 import { AffiliatesService } from "../affiliates/affiliates.service";
 import { VipService } from "../vip/vip.service";
+import { ODDS_PROVIDER } from "./providers/odds-provider.interface";
 import { SportsService } from "./sports.service";
 
 describe("SportsService", () => {
@@ -21,6 +22,7 @@ describe("SportsService", () => {
     },
     sportsSelection: {
       findUnique: jest.fn(),
+      update: jest.fn(),
     },
     account: {
       findUnique: jest.fn(),
@@ -57,6 +59,10 @@ describe("SportsService", () => {
         { provide: VipService, useValue: mockVipService },
         { provide: CacheService, useValue: mockCacheService },
         { provide: AffiliatesService, useValue: mockAffiliatesService },
+        {
+          provide: ODDS_PROVIDER,
+          useValue: { name: "static", fetchQuotes: jest.fn().mockResolvedValue([]) },
+        },
       ],
     }).compile();
 

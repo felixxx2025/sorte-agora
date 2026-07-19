@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../../database/prisma.service";
+import { FinancialService } from "../financial/financial.service";
 import { SportsService } from "../sports/sports.service";
 import { BanUserDto } from "./dto/ban-user.dto";
 import { UpdateBonusDto } from "./dto/update-bonus.dto";
@@ -9,6 +10,7 @@ export class AdminService {
   constructor(
     private prisma: PrismaService,
     private sportsService: SportsService,
+    private financialService: FinancialService,
   ) {}
 
   async getDashboard() {
@@ -66,7 +68,7 @@ export class AdminService {
     return this.prisma.transaction.findMany({
       where: {
         type: "WITHDRAWAL",
-        status: "PENDING",
+        status: { in: ["PENDING", "PROCESSING"] },
       },
       include: { user: true },
       orderBy: { createdAt: "asc" },
@@ -74,64 +76,11 @@ export class AdminService {
   }
 
   async approveWithdrawal(transactionId: string) {
-    const transaction = await this.prisma.transaction.findUnique({
-      where: { id: transactionId },
-      include: { account: true },
-    });
-
-    if (!transaction) {
-      throw new NotFoundException("Transaction not found");
-    }
-
-    // Update transaction status
-    await this.prisma.transaction.update({
-      where: { id: transactionId },
-      data: {
-        status: "COMPLETED",
-        processedAt: new Date(),
-      },
-    });
-
-    // Release locked balance
-    await this.prisma.account.update({
-      where: { id: transaction.accountId },
-      data: {
-        lockedBalance: { decrement: transaction.amount },
-      },
-    });
-
-    return { message: "Withdrawal approved" };
+    return this.financialService.approveWithdrawal(transactionId);
   }
 
   async rejectWithdrawal(transactionId: string) {
-    const transaction = await this.prisma.transaction.findUnique({
-      where: { id: transactionId },
-      include: { account: true },
-    });
-
-    if (!transaction) {
-      throw new NotFoundException("Transaction not found");
-    }
-
-    // Update transaction status
-    await this.prisma.transaction.update({
-      where: { id: transactionId },
-      data: {
-        status: "FAILED",
-        processedAt: new Date(),
-      },
-    });
-
-    // Return balance to user
-    await this.prisma.account.update({
-      where: { id: transaction.accountId },
-      data: {
-        lockedBalance: { decrement: transaction.amount },
-        balance: { increment: transaction.amount },
-      },
-    });
-
-    return { message: "Withdrawal rejected" };
+    return this.financialService.rejectWithdrawal(transactionId);
   }
 
   async getReports() {

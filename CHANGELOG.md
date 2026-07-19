@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.5.0-faseD2] — 2026-07-19
+
+### Added
+- `HttpPixProvider` (`PIX_PROVIDER_MODE=http`) com charge/payout HTTP e HMAC webhook
+- `createPayout` no fluxo de approve; status `PROCESSING` + webhook `kind=PAYOUT`
+- Odds feed opcional (`SPORTS_ODDS_MODE=http` + `SPORTS_ODDS_API_URL`)
+- Kill-switch `ENABLE_CASINO` no controller; live exige `CASINO_PROVIDER_BASE_URL`
+
+### Changed
+- Admin approve/reject delega a `FinancialService`
+- Webhook PIX injeta `PIX_PROVIDER` (não só sandbox)
+- Compose passa env de PIX/CASINO/SPORTS providers
+
+### Status
+Maturidade ~93/100 — adapters prontos; PSP real via `PIX_API_BASE_URL` + token.
+
 ## [1.4.0-faseD1] — 2026-07-19
 
 ### Added
