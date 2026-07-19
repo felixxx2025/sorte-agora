@@ -6,6 +6,7 @@ import * as crypto from 'crypto';
 import * as QRCode from 'qrcode';
 import * as speakeasy from 'speakeasy';
 
+import { MailService } from '../../common/services/mail.service';
 import { TokenBlacklistService } from '../../common/services/token-blacklist.service';
 import { PrismaService } from '../../database/prisma.service';
 import { EnableMfaDto } from './dto/enable-mfa.dto';
@@ -21,6 +22,7 @@ export class AuthService {
     private jwtService: JwtService,
     private configService: ConfigService,
     private tokenBlacklistService: TokenBlacklistService,
+    private mailService: MailService,
   ) { }
 
   async register(registerDto: RegisterDto) {
@@ -34,6 +36,16 @@ export class AuthService {
 
     const hashedPassword = await bcrypt.hash(registerDto.password, 12);
 
+    let referredById: string | undefined;
+    if (registerDto.referralCode) {
+      const affiliate = await this.prisma.affiliate.findUnique({
+        where: { trackingCode: registerDto.referralCode },
+      });
+      if (affiliate) {
+        referredById = affiliate.userId;
+      }
+    }
+
     const user = await this.prisma.user.create({
       data: {
         email: registerDto.email,
@@ -42,6 +54,7 @@ export class AuthService {
         firstName: registerDto.firstName,
         lastName: registerDto.lastName,
         referralCode: this.generateReferralCode(),
+        referredById,
       },
       select: {
         id: true,
@@ -297,14 +310,14 @@ export class AuthService {
     });
 
     const frontendUrl = this.configService.get('FRONTEND_URL') || 'http://localhost:3000';
-    // Fase 1: e-mail real na Fase 2 — link disponível nos logs de desenvolvimento
-    console.log(`Password reset link: ${frontendUrl}/reset-password?token=${resetToken}`);
+    const resetUrl = `${frontendUrl}/reset-password?token=${resetToken}`;
+
+    await this.mailService.sendPasswordReset(user.email, resetUrl);
 
     return {
       message: 'If the email exists, a reset link has been sent',
-      // Expõe token apenas em development para testes da Fase 1
       ...(this.configService.get('NODE_ENV') !== 'production'
-        ? { resetToken, resetUrl: `${frontendUrl}/reset-password?token=${resetToken}` }
+        ? { resetToken, resetUrl }
         : {}),
     };
   }

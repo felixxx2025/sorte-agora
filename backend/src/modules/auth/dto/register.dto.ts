@@ -24,4 +24,8 @@ export class RegisterDto {
   @IsOptional()
   @IsEnum(['BRL', 'USD', 'EUR'])
   currency?: string;
+
+  @IsString()
+  @IsOptional()
+  referralCode?: string;
 }

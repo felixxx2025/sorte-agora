@@ -81,7 +81,8 @@ describe('CasinoController', () => {
 
   describe('launchGame', () => {
     it('should launch a game', async () => {
-      const launchGameDto = { userId: 'user1' };
+      const launchGameDto = { betAmount: 10 };
+      const user = { id: 'user1' };
       const mockResult = {
         sessionId: 'session1',
         gameUrl: 'https://provider.example.com/game/1',
@@ -90,10 +91,13 @@ describe('CasinoController', () => {
 
       mockCasinoService.launchGame.mockResolvedValue(mockResult);
 
-      const result = await controller.launchGame('1', launchGameDto);
+      const result = await controller.launchGame('1', user, launchGameDto);
 
       expect(result).toHaveProperty('gameUrl');
-      expect(mockCasinoService.launchGame).toHaveBeenCalledWith('1', launchGameDto);
+      expect(mockCasinoService.launchGame).toHaveBeenCalledWith('1', {
+        ...launchGameDto,
+        userId: 'user1',
+      });
     });
   });
 
@@ -106,7 +110,7 @@ describe('CasinoController', () => {
 
       mockCasinoService.getSessions.mockResolvedValue(mockSessions);
 
-      const result = await controller.getSessions('user1');
+      const result = await controller.getSessions({ id: 'user1' });
 
       expect(result).toHaveLength(2);
       expect(mockCasinoService.getSessions).toHaveBeenCalledWith('user1');

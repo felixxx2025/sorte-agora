@@ -5,6 +5,7 @@ import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
 
 import { TokenBlacklistService } from '../../common/services/token-blacklist.service';
+import { MailService } from '../../common/services/mail.service';
 import { PrismaService } from '../../database/prisma.service';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
@@ -47,6 +48,11 @@ describe('AuthService', () => {
     removeFromBlacklist: jest.fn().mockResolvedValue(undefined),
   };
 
+  const mockMailService = {
+    sendPasswordReset: jest.fn().mockResolvedValue({ queued: false, mode: 'log' }),
+    sendMail: jest.fn().mockResolvedValue({ queued: false, mode: 'log' }),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -66,6 +72,10 @@ describe('AuthService', () => {
         {
           provide: TokenBlacklistService,
           useValue: mockTokenBlacklistService,
+        },
+        {
+          provide: MailService,
+          useValue: mockMailService,
         },
       ],
     }).compile();

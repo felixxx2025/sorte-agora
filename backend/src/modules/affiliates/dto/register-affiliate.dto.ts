@@ -1,9 +1,11 @@
-import { IsString, IsEnum, IsNumber } from 'class-validator';
+import { IsIn, IsNumber, Max, Min } from 'class-validator';
 
 export class RegisterAffiliateDto {
-  @IsEnum(['CPA', 'REVENUE_SHARE', 'HYBRID'])
+  @IsIn(['CPA', 'REVSHARE', 'REVENUE_SHARE', 'HYBRID'])
   commissionType: string;
 
   @IsNumber()
+  @Min(0)
+  @Max(100)
   commissionRate: number;
 }

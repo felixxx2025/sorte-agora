@@ -70,9 +70,12 @@ describe('UsersService', () => {
           phone: true,
           country: true,
           currency: true,
+          role: true,
           isVerified: true,
           isKycVerified: true,
+          mfaEnabled: true,
           vipPoints: true,
+          vipLevelId: true,
           account: true,
           createdAt: true,
         },
@@ -113,6 +116,7 @@ describe('UsersService', () => {
           firstName: true,
           lastName: true,
           phone: true,
+          country: true,
         },
       });
     });

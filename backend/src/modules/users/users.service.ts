@@ -1,5 +1,10 @@
-import { Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
+import { SubmitKycDto } from './dto/submit-kyc.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 
 @Injectable()
@@ -17,9 +22,12 @@ export class UsersService {
         phone: true,
         country: true,
         currency: true,
+        role: true,
         isVerified: true,
         isKycVerified: true,
+        mfaEnabled: true,
         vipPoints: true,
+        vipLevelId: true,
         account: true,
         createdAt: true,
       },
@@ -36,7 +44,46 @@ export class UsersService {
         firstName: true,
         lastName: true,
         phone: true,
+        country: true,
       },
     });
+  }
+
+  async submitKyc(userId: string, dto: SubmitKycDto) {
+    const pending = await this.prisma.kyCRecord.findFirst({
+      where: { userId, status: 'PENDING' },
+    });
+
+    if (pending) {
+      throw new BadRequestException('You already have a pending KYC submission');
+    }
+
+    return this.prisma.kyCRecord.create({
+      data: {
+        userId,
+        documentType: dto.documentType,
+        documentNumber: dto.documentNumber,
+        documentFront: dto.documentFront,
+        selfie: dto.selfie,
+        status: 'PENDING',
+      },
+    });
+  }
+
+  async getKycStatus(userId: string) {
+    const latest = await this.prisma.kyCRecord.findFirst({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { isKycVerified: true },
+    });
+
+    return {
+      isKycVerified: user?.isKycVerified || false,
+      latest,
+    };
   }
 }

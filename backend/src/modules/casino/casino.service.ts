@@ -1,14 +1,23 @@
-import { Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import * as crypto from 'crypto';
 import { PrismaService } from '../../database/prisma.service';
 import { LaunchGameDto } from './dto/launch-game.dto';
 
 @Injectable()
 export class CasinoService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private configService: ConfigService,
+  ) {}
 
   async getGames(category?: string) {
     const where = category ? { category } : {};
-    
+
     return this.prisma.casinoGame.findMany({
       where: {
         ...where,
@@ -20,37 +29,45 @@ export class CasinoService {
   }
 
   async getGame(id: string) {
-    return this.prisma.casinoGame.findUnique({
-      where: { id },
-    });
+    const game = await this.prisma.casinoGame.findUnique({ where: { id } });
+    if (!game) throw new NotFoundException('Game not found');
+    return game;
   }
 
-  async launchGame(gameId: string, launchGameDto: LaunchGameDto) {
+  async launchGame(
+    gameId: string,
+    launchGameDto: LaunchGameDto & { userId: string },
+  ) {
     const game = await this.prisma.casinoGame.findUnique({
       where: { id: gameId },
     });
 
-    if (!game) {
-      throw new Error('Game not found');
+    if (!game || !game.isActive) {
+      throw new NotFoundException('Game not found');
     }
 
-    // Create session
+    if (!launchGameDto.userId) {
+      throw new BadRequestException('userId is required');
+    }
+
+    const sessionToken = this.generateSessionToken();
     const session = await this.prisma.casinoSession.create({
       data: {
         userId: launchGameDto.userId,
         gameId,
-        sessionToken: this.generateSessionToken(),
+        sessionToken,
       },
     });
 
-    // In production, integrate with casino provider API
-    // to get the actual game launch URL
-    const gameUrl = this.generateGameUrl(game, session.sessionToken);
+    const gameUrl = this.buildProviderUrl(game, sessionToken);
 
     return {
       sessionId: session.id,
+      sessionToken,
       gameUrl,
-      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
+      provider: game.provider,
+      mode: this.configService.get('CASINO_PROVIDER_MODE') || 'demo',
+      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
     };
   }
 
@@ -64,11 +81,22 @@ export class CasinoService {
   }
 
   private generateSessionToken(): string {
-    return Math.random().toString(36).substring(2) + Date.now().toString(36);
+    return crypto.randomBytes(24).toString('hex');
   }
 
-  private generateGameUrl(game: any, sessionToken: string): string {
-    // In production, this would be the actual provider's game URL
-    return `https://provider.example.com/games/${game.providerGameId}?token=${sessionToken}`;
+  private buildProviderUrl(game: any, sessionToken: string): string {
+    const mode = this.configService.get('CASINO_PROVIDER_MODE') || 'demo';
+    const base =
+      this.configService.get('CASINO_PROVIDER_BASE_URL') ||
+      'https://demo-casino.sorteagora.local';
+
+    if (mode === 'live') {
+      return `${base}/launch/${game.provider}/${game.providerGameId}?token=${sessionToken}`;
+    }
+
+    // Demo adapter: página local simulada (Fase 2)
+    const frontend =
+      this.configService.get('FRONTEND_URL') || 'http://localhost:3000';
+    return `${frontend}/casino/play?game=${encodeURIComponent(game.providerGameId)}&token=${sessionToken}&name=${encodeURIComponent(game.name)}`;
   }
 }

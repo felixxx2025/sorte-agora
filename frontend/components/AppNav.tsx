@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useLogout } from '@/lib/hooks';
+import { useLogout, useProfile } from '@/lib/hooks';
 import { useAuthStore } from '@/lib/stores/authStore';
 
 const NAV_ITEMS = [
@@ -11,6 +11,7 @@ const NAV_ITEMS = [
   { href: '/sports', label: 'Esportes' },
   { href: '/wallet', label: 'Carteira' },
   { href: '/vip', label: 'VIP' },
+  { href: '/affiliates', label: 'Afiliados' },
   { href: '/profile', label: 'Perfil' },
 ];
 
@@ -18,17 +19,23 @@ export function AppNav() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, isAuthenticated } = useAuthStore();
+  const { data: profile } = useProfile();
   const logout = useLogout();
 
   if (!isAuthenticated) {
     return null;
   }
 
+  const role = (profile as any)?.role || (user as any)?.role;
+  const items =
+    role === 'ADMIN'
+      ? [...NAV_ITEMS, { href: '/admin', label: 'Admin' }]
+      : NAV_ITEMS;
+
   const handleLogout = async () => {
     try {
       await logout.mutateAsync();
     } catch {
-      // limpa sessão local mesmo se API falhar
       useAuthStore.getState().logout();
       localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');
@@ -47,8 +54,8 @@ export function AppNav() {
         </Link>
 
         <nav className="flex flex-wrap items-center gap-1">
-          {NAV_ITEMS.map((item) => {
-            const active = pathname === item.href;
+          {items.map((item) => {
+            const active = pathname === item.href || pathname.startsWith(item.href + '/');
             return (
               <Link
                 key={item.href}

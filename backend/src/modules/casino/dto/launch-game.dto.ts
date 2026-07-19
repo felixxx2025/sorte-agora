@@ -1,6 +1,8 @@
-import { IsString } from 'class-validator';
+import { IsNumber, IsOptional, Min } from 'class-validator';
 
 export class LaunchGameDto {
-  @IsString()
-  userId: string;
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  betAmount?: number;
 }

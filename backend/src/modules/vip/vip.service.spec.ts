@@ -4,7 +4,6 @@ import { VipService } from './vip.service';
 
 describe('VipService', () => {
   let service: VipService;
-  let prismaService: PrismaService;
 
   const mockPrismaService = {
     user: {
@@ -19,22 +18,22 @@ describe('VipService', () => {
     vipMission: {
       findMany: jest.fn(),
     },
+    vipMissionProgress: {
+      findUnique: jest.fn(),
+      create: jest.fn(),
+      upsert: jest.fn(),
+    },
   };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         VipService,
-        {
-          provide: PrismaService,
-          useValue: mockPrismaService,
-        },
+        { provide: PrismaService, useValue: mockPrismaService },
       ],
     }).compile();
 
     service = module.get<VipService>(VipService);
-    prismaService = module.get<PrismaService>(PrismaService);
-
     jest.clearAllMocks();
   });
 
@@ -44,70 +43,54 @@ describe('VipService', () => {
 
   describe('getVipStatus', () => {
     it('should return VIP status for user', async () => {
-      const mockUser = {
+      mockPrismaService.user.findUnique.mockResolvedValue({
         id: '1',
         vipPoints: 500,
         vipLevelId: 'level1',
-        vipLevel: {
-          id: 'level1',
-          name: 'Bronze',
-          level: 1,
-          pointsRequired: 0,
-          cashbackPercent: 5,
-          bonusAmount: 100,
-        },
-      };
-
-      const mockNextLevel = {
+        vipLevel: { id: 'level1', name: 'Bronze', level: 1, pointsRequired: 0 },
+      });
+      mockPrismaService.vipLevel.findFirst.mockResolvedValue({
         id: 'level2',
-        name: 'Silver',
+        name: 'Prata',
         level: 2,
         pointsRequired: 1000,
-        cashbackPercent: 10,
-        bonusAmount: 200,
-      };
+      });
 
-      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
-      mockPrismaService.vipLevel.findFirst.mockResolvedValue(mockNextLevel);
-
-      const result = await service.getVipStatus('user1');
-
-      expect(result).toBeDefined();
-      expect(result.level).toBeDefined();
+      const result = await service.getVipStatus('1');
+      expect(result.level.name).toBe('Bronze');
       expect(result.points).toBe(500);
     });
   });
 
   describe('getVipLevels', () => {
-    it('should return all VIP levels', async () => {
-      const mockLevels = [
-        { id: 'level1', name: 'Bronze', level: 1, pointsRequired: 0 },
-        { id: 'level2', name: 'Silver', level: 2, pointsRequired: 1000 },
-      ];
-
-      mockPrismaService.vipLevel.findMany.mockResolvedValue(mockLevels);
-
+    it('should return levels', async () => {
+      mockPrismaService.vipLevel.findMany.mockResolvedValue([{ level: 1 }]);
       const result = await service.getVipLevels();
-
-      expect(result).toHaveLength(2);
-      expect(result[0].name).toBe('Bronze');
+      expect(result).toHaveLength(1);
     });
   });
 
   describe('getMissions', () => {
-    it('should return VIP missions', async () => {
-      const mockMissions = [
-        { id: '1', title: 'Deposit 100', type: 'DAILY', reward: 50, target: 100 },
-        { id: '2', title: 'Bet 500', type: 'WEEKLY', reward: 200, target: 500 },
-      ];
+    it('should return missions with progress', async () => {
+      mockPrismaService.vipMission.findMany.mockResolvedValue([
+        {
+          id: 'm1',
+          code: 'daily-bets-10',
+          title: 'Faça 10 apostas',
+          description: 'desc',
+          type: 'DAILY',
+          target: 10,
+          rewardPoints: 50,
+        },
+      ]);
+      mockPrismaService.vipMissionProgress.findUnique.mockResolvedValue({
+        progress: 3,
+        completed: false,
+      });
 
-      mockPrismaService.vipMission.findMany.mockResolvedValue(mockMissions);
-
-      const result = await service.getMissions('user1');
-
-      expect(result).toBeDefined();
-      expect(result.daily).toBeDefined();
-      expect(result.weekly).toBeDefined();
+      const result = await service.getMissions('u1');
+      expect(result.daily).toHaveLength(1);
+      expect(result.daily[0].progress).toBe(3);
     });
   });
 });

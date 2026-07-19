@@ -4,13 +4,20 @@
 
 | Campo | Valor |
 |-------|-------|
-| **Versão** | 1.0.0-fase1 |
-| **Fase atual** | **Fase 1 — Estabilização concluída** |
-| **Maturidade** | ~45/100 (scaffold estável; não produção real) |
+| **Versão** | 1.0.0-fase2 |
+| **Fase atual** | **Fase 2 — Implementação concluída** |
+| **Maturidade** | ~65/100 (produto demo completo; providers reais na Fase 3) |
 | **Domínio** | Apostas (cassino + esportes) — **não** rifas |
 | **Última atualização** | 19 de julho de 2026 |
 
 > Documentos antigos que afirmam “92/100 pronto para produção” estão **desatualizados**. A fonte de verdade é [`STATUS.md`](./STATUS.md).
+
+## O que a Fase 2 entregou
+
+- VIP missões reais, afiliados com comissões, admin UI (`/admin`)
+- Settlement de apostas, KYC submit/review, MFA na UI
+- Casino demo adapter, MailService, reports financeiros reais
+- Testes: **80/80** unitários — ver `docs/test-results/fase-2.md`
 
 ## O que a Fase 1 entregou
 
@@ -74,5 +81,5 @@ npm run dev            # http://localhost:3000
 ## Roadmap
 
 1. ~~Fase 1 — Estabilização~~ ✅
-2. **Fase 2** — Implementação completa (módulos, UX/UI, integrações)
+2. ~~Fase 2 — Implementação completa~~ ✅
 3. **Fase 3** — Testes amplos, review, docs finais, go-live checklist

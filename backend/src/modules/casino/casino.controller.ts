@@ -1,4 +1,5 @@
 import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
+import { CurrentUser } from '../../common/decorators/user.decorator';
 import { Public } from '../../common/decorators/public.decorator';
 import { JwtAuthGuard } from '../../common/guards/auth.guard';
 import { CasinoService } from './casino.service';
@@ -20,15 +21,20 @@ export class CasinoController {
     return this.casinoService.getGame(id);
   }
 
-  @UseGuards(JwtAuthGuard)
   @Post('games/:id/launch')
-  launchGame(@Param('id') id: string, @Body() launchGameDto: LaunchGameDto) {
-    return this.casinoService.launchGame(id, launchGameDto);
+  launchGame(
+    @Param('id') id: string,
+    @CurrentUser() user: any,
+    @Body() launchGameDto: LaunchGameDto,
+  ) {
+    return this.casinoService.launchGame(id, {
+      ...launchGameDto,
+      userId: user.id,
+    } as any);
   }
 
-  @UseGuards(JwtAuthGuard)
   @Get('sessions')
-  getSessions(@Body() userId: string) {
-    return this.casinoService.getSessions(userId);
+  getSessions(@CurrentUser() user: any) {
+    return this.casinoService.getSessions(user.id);
   }
 }

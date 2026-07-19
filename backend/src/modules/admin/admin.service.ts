@@ -131,13 +131,91 @@ export class AdminService {
   }
 
   async getReports() {
-    // In production, generate actual reports
+    const since30d = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+
+    const [deposits, withdrawals, wins, activeUsers, newRegistrations] =
+      await Promise.all([
+        this.prisma.transaction.aggregate({
+          where: { type: 'DEPOSIT', status: 'COMPLETED' },
+          _sum: { amount: true },
+        }),
+        this.prisma.transaction.aggregate({
+          where: { type: 'WITHDRAWAL', status: 'COMPLETED' },
+          _sum: { amount: true },
+        }),
+        this.prisma.transaction.aggregate({
+          where: { type: 'WIN', status: 'COMPLETED' },
+          _sum: { amount: true },
+        }),
+        this.prisma.user.count({
+          where: {
+            isActive: true,
+            isBanned: false,
+            lastLoginAt: { gte: since30d },
+          },
+        }),
+        this.prisma.user.count({
+          where: { createdAt: { gte: since30d } },
+        }),
+      ]);
+
+    const revenue = Number(deposits._sum.amount || 0);
+    const withdrawn = Number(withdrawals._sum.amount || 0);
+    const paidWins = Number(wins._sum.amount || 0);
+    const profit = revenue - withdrawn - paidWins;
+
     return {
-      revenue: 0,
-      profit: 0,
-      activeUsers: 0,
-      newRegistrations: 0,
+      revenue,
+      profit,
+      withdrawn,
+      paidWins,
+      activeUsers,
+      newRegistrations,
+      periodDays: 30,
     };
+  }
+
+  async listPendingKyc() {
+    return this.prisma.kyCRecord.findMany({
+      where: { status: 'PENDING' },
+      include: {
+        user: {
+          select: { id: true, email: true, firstName: true, lastName: true },
+        },
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+  }
+
+  async reviewKyc(kycId: string, decision: 'APPROVED' | 'REJECTED', adminId: string, reason?: string) {
+    const record = await this.prisma.kyCRecord.findUnique({ where: { id: kycId } });
+    if (!record) {
+      throw new Error('KYC record not found');
+    }
+
+    await this.prisma.kyCRecord.update({
+      where: { id: kycId },
+      data: {
+        status: decision,
+        reviewedAt: new Date(),
+        reviewedBy: adminId,
+        rejectionReason: decision === 'REJECTED' ? reason || 'Rejected' : null,
+      },
+    });
+
+    if (decision === 'APPROVED') {
+      await this.prisma.user.update({
+        where: { id: record.userId },
+        data: { isKycVerified: true, isVerified: true },
+      });
+    }
+
+    return { message: `KYC ${decision.toLowerCase()}` };
+  }
+
+  async settleSportsBet(betId: string, result: 'WON' | 'LOST') {
+    // Delegated via SportsService in controller — kept for compatibility if needed
+    return { betId, result };
   }
 
   async createBonus(createBonusDto: any) {

@@ -1,7 +1,8 @@
-import { Body, Controller, Delete, Get, Param, Post, Put, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, Request, UseGuards } from '@nestjs/common';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../common/guards/auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
+import { SportsService } from '../sports/sports.service';
 import { AdminService } from './admin.service';
 import { BanUserDto } from './dto/ban-user.dto';
 import { UpdateBonusDto } from './dto/update-bonus.dto';
@@ -10,7 +11,10 @@ import { UpdateBonusDto } from './dto/update-bonus.dto';
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('ADMIN')
 export class AdminController {
-  constructor(private adminService: AdminService) { }
+  constructor(
+    private adminService: AdminService,
+    private sportsService: SportsService,
+  ) { }
 
   @Get('dashboard')
   getDashboard() {
@@ -55,6 +59,28 @@ export class AdminController {
   @Get('reports')
   getReports() {
     return this.adminService.getReports();
+  }
+
+  @Get('kyc')
+  listPendingKyc() {
+    return this.adminService.listPendingKyc();
+  }
+
+  @Put('kyc/:id/review')
+  reviewKyc(
+    @Param('id') id: string,
+    @Request() req: any,
+    @Body() body: { decision: 'APPROVED' | 'REJECTED'; reason?: string },
+  ) {
+    return this.adminService.reviewKyc(id, body.decision, req.user.id, body.reason);
+  }
+
+  @Put('sports/bets/:id/settle')
+  settleBet(
+    @Param('id') id: string,
+    @Body() body: { result: 'WON' | 'LOST' },
+  ) {
+    return this.sportsService.settleBet(id, body.result);
   }
 
   @Post('bonuses')

@@ -38,4 +38,19 @@ export const usersApi = {
     const response = await apiClient.put('/users/profile', data);
     return response.data;
   },
+
+  async submitKyc(data: {
+    documentType: string;
+    documentNumber: string;
+    documentFront: string;
+    selfie: string;
+  }) {
+    const response = await apiClient.post('/users/kyc', data);
+    return response.data;
+  },
+
+  async getKycStatus() {
+    const response = await apiClient.get('/users/kyc');
+    return response.data;
+  },
 };

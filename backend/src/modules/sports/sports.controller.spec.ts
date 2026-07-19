@@ -81,7 +81,8 @@ describe('SportsController', () => {
 
   describe('placeBet', () => {
     it('should place a bet', async () => {
-      const placeBetDto = { selectionId: 's1', stake: 100, userId: 'user1' };
+      const placeBetDto = { selectionId: 's1', stake: 100 };
+      const user = { id: 'user1' };
       const mockResult = {
         betId: 'bet1',
         potentialWin: 250,
@@ -90,10 +91,13 @@ describe('SportsController', () => {
 
       mockSportsService.placeBet.mockResolvedValue(mockResult);
 
-      const result = await controller.placeBet(placeBetDto);
+      const result = await controller.placeBet(user, placeBetDto as any);
 
       expect(result).toHaveProperty('betId');
-      expect(mockSportsService.placeBet).toHaveBeenCalledWith(placeBetDto);
+      expect(mockSportsService.placeBet).toHaveBeenCalledWith({
+        ...placeBetDto,
+        userId: 'user1',
+      });
     });
   });
 
@@ -106,7 +110,7 @@ describe('SportsController', () => {
 
       mockSportsService.getBets.mockResolvedValue(mockBets);
 
-      const result = await controller.getBets('user1');
+      const result = await controller.getBets({ id: 'user1' });
 
       expect(result).toHaveLength(2);
       expect(mockSportsService.getBets).toHaveBeenCalledWith('user1');

@@ -1,14 +1,22 @@
-import { Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
+import { VipService } from '../vip/vip.service';
 import { PlaceBetDto } from './dto/place-bet.dto';
 
 @Injectable()
 export class SportsService {
-  constructor(private prisma: PrismaService) { }
+  constructor(
+    private prisma: PrismaService,
+    private vipService: VipService,
+  ) { }
 
   async getEvents(isLive: boolean = false) {
     return this.prisma.sportsEvent.findMany({
-      where: { isLive },
+      where: isLive ? { isLive: true } : undefined,
       include: {
         markets: {
           include: {
@@ -22,7 +30,7 @@ export class SportsService {
   }
 
   async getEvent(id: string) {
-    return this.prisma.sportsEvent.findUnique({
+    const event = await this.prisma.sportsEvent.findUnique({
       where: { id },
       include: {
         markets: {
@@ -32,6 +40,8 @@ export class SportsService {
         },
       },
     });
+    if (!event) throw new NotFoundException('Event not found');
+    return event;
   }
 
   async placeBet(placeBetDto: PlaceBetDto) {
@@ -41,50 +51,65 @@ export class SportsService {
     });
 
     if (!selection) {
-      throw new Error('Selection not found');
+      throw new NotFoundException('Selection not found');
     }
 
-    // Check user balance
     const account = await this.prisma.account.findUnique({
       where: { userId: placeBetDto.userId },
     });
 
-    if (Number(account.balance) < Number(placeBetDto.stake)) {
-      throw new Error('Insufficient balance');
+    if (!account) {
+      throw new NotFoundException('Account not found');
     }
 
-    // Create bet
-    const bet = await this.prisma.sportsBet.create({
-      data: {
-        userId: placeBetDto.userId,
-        eventId: selection.market.eventId,
-        selectionId: placeBetDto.selectionId,
-        stake: placeBetDto.stake,
-        odds: selection.odds,
-        status: 'PENDING',
-      },
+    if (Number(account.balance) < Number(placeBetDto.stake)) {
+      throw new BadRequestException('Insufficient balance');
+    }
+
+    const result = await this.prisma.$transaction(async (tx) => {
+      const bet = await tx.sportsBet.create({
+        data: {
+          userId: placeBetDto.userId,
+          eventId: selection.market.eventId,
+          selectionId: placeBetDto.selectionId,
+          stake: placeBetDto.stake,
+          odds: selection.odds,
+          status: 'PENDING',
+        },
+      });
+
+      await tx.account.update({
+        where: { id: account.id },
+        data: { balance: { decrement: placeBetDto.stake } },
+      });
+
+      await tx.transaction.create({
+        data: {
+          userId: placeBetDto.userId,
+          accountId: account.id,
+          type: 'BET',
+          amount: placeBetDto.stake,
+          status: 'COMPLETED',
+        },
+      });
+
+      return bet;
     });
 
-    // Deduct balance
-    await this.prisma.account.update({
-      where: { id: account.id },
-      data: { balance: { decrement: placeBetDto.stake } },
-    });
-
-    // Create transaction
-    await this.prisma.transaction.create({
-      data: {
-        userId: placeBetDto.userId,
-        accountId: account.id,
-        type: 'BET',
-        amount: placeBetDto.stake,
-        status: 'COMPLETED',
-      },
-    });
+    try {
+      await this.vipService.addProgress(placeBetDto.userId, 'BETS_COUNT', 1);
+      await this.vipService.addProgress(
+        placeBetDto.userId,
+        'BET_AMOUNT',
+        Math.floor(Number(placeBetDto.stake)),
+      );
+    } catch {
+      // VIP progress não deve quebrar aposta
+    }
 
     return {
-      betId: bet.id,
-      potentialWin: placeBetDto.stake * Number(selection.odds),
+      betId: result.id,
+      potentialWin: Number(placeBetDto.stake) * Number(selection.odds),
       status: 'PENDING',
     };
   }
@@ -98,6 +123,71 @@ export class SportsService {
       },
       orderBy: { createdAt: 'desc' },
       take: 50,
+    });
+  }
+
+  /**
+   * Liquida aposta: WON credita payout; LOST encerra sem crédito.
+   */
+  async settleBet(betId: string, result: 'WON' | 'LOST') {
+    const bet = await this.prisma.sportsBet.findUnique({
+      where: { id: betId },
+    });
+
+    if (!bet) {
+      throw new NotFoundException('Bet not found');
+    }
+
+    if (bet.status !== 'PENDING') {
+      throw new BadRequestException(`Bet already settled as ${bet.status}`);
+    }
+
+    if (result === 'LOST') {
+      return this.prisma.sportsBet.update({
+        where: { id: betId },
+        data: {
+          status: 'LOST',
+          settledAt: new Date(),
+          payout: 0,
+        },
+      });
+    }
+
+    const payout = Number(bet.stake) * Number(bet.odds);
+
+    return this.prisma.$transaction(async (tx) => {
+      const updated = await tx.sportsBet.update({
+        where: { id: betId },
+        data: {
+          status: 'WON',
+          settledAt: new Date(),
+          payout,
+        },
+      });
+
+      const account = await tx.account.findUnique({
+        where: { userId: bet.userId },
+      });
+
+      if (account) {
+        await tx.account.update({
+          where: { id: account.id },
+          data: { balance: { increment: payout } },
+        });
+
+        await tx.transaction.create({
+          data: {
+            userId: bet.userId,
+            accountId: account.id,
+            type: 'WIN',
+            amount: payout,
+            status: 'COMPLETED',
+            processedAt: new Date(),
+          },
+        });
+      }
+
+      return updated;
     });
   }
 }

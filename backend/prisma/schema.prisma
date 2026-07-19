@@ -40,9 +40,11 @@ model User {
   resetTokenExpiry  DateTime?
   
   vipLevelId        String?
+  vipLevel          VipLevel? @relation(fields: [vipLevelId], references: [id])
   vipPoints         Int       @default(0)
   
   affiliateId       String?
+  affiliateProfile  Affiliate?
   referredById      String?
   referralCode      String?   @unique
   referredBy        User?     @relation("Referral", fields: [referredById], references: [id])
@@ -57,9 +59,11 @@ model User {
   casinoSessions    CasinoSession[]
   sportsBets        SportsBet[]
   auditLogs         AuditLog[]
+  missionProgress   VipMissionProgress[]
   
   @@index([email])
   @@index([isKycVerified])
+  @@index([vipLevelId])
   @@map("users")
 }
 
@@ -93,12 +97,17 @@ model KyCRecord {
   documentFront   String
   selfie          String
   
-  status          String
+  status          String   @default("PENDING")
+  rejectionReason String?
+  
   reviewedAt      DateTime?
+  reviewedBy      String?
   
   createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
   
   @@index([userId])
+  @@index([status])
   @@map("kyc_records")
 }
 
@@ -237,13 +246,16 @@ model SportsBet {
   
   stake           Decimal  @db.Decimal(20, 8)
   odds            Decimal  @db.Decimal(10, 4)
+  payout          Decimal? @db.Decimal(20, 8)
   
   status          String
+  settledAt       DateTime?
   
   createdAt       DateTime @default(now())
   
   @@index([userId])
   @@index([eventId])
+  @@index([status])
   @@map("sports_bets")
 }
 
@@ -259,8 +271,48 @@ model VipLevel {
   pointsRequired  Int
   cashbackPercent Decimal  @db.Decimal(5, 2)
   
+  users           User[]
+  
   @@index([level])
   @@map("vip_levels")
+}
+
+model VipMission {
+  id              String   @id @default(cuid())
+  code            String   @unique
+  title           String
+  description     String
+  type            String   // DAILY | WEEKLY
+  metric          String   // BETS_COUNT | BET_AMOUNT | CASINO_SESSIONS
+  target          Int
+  rewardPoints    Int
+  isActive        Boolean  @default(true)
+  
+  createdAt       DateTime @default(now())
+  progress        VipMissionProgress[]
+  
+  @@index([type])
+  @@index([isActive])
+  @@map("vip_missions")
+}
+
+model VipMissionProgress {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  missionId       String
+  mission         VipMission @relation(fields: [missionId], references: [id], onDelete: Cascade)
+  
+  progress        Int      @default(0)
+  completed       Boolean  @default(false)
+  completedAt     DateTime?
+  periodKey       String   // e.g. 2026-07-19 or 2026-W29
+  
+  updatedAt       DateTime @updatedAt
+  
+  @@unique([userId, missionId, periodKey])
+  @@index([userId])
+  @@map("vip_mission_progress")
 }
 
 // ============================================
@@ -270,15 +322,39 @@ model VipLevel {
 model Affiliate {
   id              String   @id @default(cuid())
   userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   
   commissionType  String
   commissionRate  Decimal  @db.Decimal(5, 2)
   
   trackingCode    String   @unique
   
+  commissions     AffiliateCommission[]
+  
+  createdAt       DateTime @default(now())
+  
   @@index([trackingCode])
   @@index([commissionType])
   @@map("affiliates")
+}
+
+model AffiliateCommission {
+  id              String   @id @default(cuid())
+  affiliateId     String
+  affiliate       Affiliate @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
+  
+  referredUserId  String?
+  amount          Decimal  @db.Decimal(20, 8)
+  status          String   // PENDING | PAID | CANCELLED
+  source          String   // DEPOSIT | BET | CPA
+  period          String?
+  
+  createdAt       DateTime @default(now())
+  paidAt          DateTime?
+  
+  @@index([affiliateId])
+  @@index([status])
+  @@map("affiliate_commissions")
 }
 
 // ============================================

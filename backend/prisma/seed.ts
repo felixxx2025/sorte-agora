@@ -22,6 +22,44 @@ async function main() {
     });
   }
 
+  const missions = [
+    {
+      code: 'daily-bets-10',
+      title: 'Faça 10 apostas',
+      description: 'Complete 10 apostas em esportes',
+      type: 'DAILY',
+      metric: 'BETS_COUNT',
+      target: 10,
+      rewardPoints: 50,
+    },
+    {
+      code: 'daily-bet-amount',
+      title: 'Aposte R$ 100',
+      description: 'Some R$ 100 em apostas no dia',
+      type: 'DAILY',
+      metric: 'BET_AMOUNT',
+      target: 100,
+      rewardPoints: 80,
+    },
+    {
+      code: 'weekly-casino-3',
+      title: 'Jogue 3 sessões de cassino',
+      description: 'Abra 3 jogos de cassino na semana',
+      type: 'WEEKLY',
+      metric: 'CASINO_SESSIONS',
+      target: 3,
+      rewardPoints: 75,
+    },
+  ];
+
+  for (const mission of missions) {
+    await prisma.vipMission.upsert({
+      where: { code: mission.code },
+      update: mission,
+      create: mission,
+    });
+  }
+
   const games = [
     {
       provider: 'DEMO',
