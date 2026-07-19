@@ -55,6 +55,16 @@ const config: Config = {
           DEFAULT: 'hsl(var(--card))',
           foreground: 'hsl(var(--card-foreground))',
         },
+        sa: {
+          bg: 'var(--sa-bg)',
+          elevated: 'var(--sa-bg-elevated)',
+          surface: 'var(--sa-surface)',
+          red: 'var(--sa-red)',
+          'red-dark': 'var(--sa-red-dark)',
+          gold: 'var(--sa-gold)',
+          'gold-dim': 'var(--sa-gold-dim)',
+          muted: 'var(--sa-muted)',
+        },
       },
       borderRadius: {
         lg: 'var(--radius)',

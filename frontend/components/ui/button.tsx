@@ -7,10 +7,13 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: 'bg-gradient-to-r from-[#FFD700] to-[#FFA500] text-[#1A1A2E] hover:opacity-90',
-        secondary: 'bg-[#16213E] text-white border border-[#FFD700] hover:bg-[#FFD700]/10',
+        default:
+          'bg-gradient-to-r from-sa-gold to-sa-gold-dim text-black hover:opacity-90 font-semibold',
+        secondary:
+          'bg-sa-surface text-white border border-sa-red/50 hover:bg-sa-red/15',
         ghost: 'bg-transparent text-white hover:bg-white/10',
-        outline: 'border border-[#FFD700] text-[#FFD700] hover:bg-[#FFD700]/10',
+        outline: 'border border-sa-gold text-sa-gold hover:bg-sa-gold/10',
+        destructive: 'bg-sa-red text-white hover:bg-sa-red-dark font-semibold',
       },
       size: {
         default: 'h-10 py-2 px-4',

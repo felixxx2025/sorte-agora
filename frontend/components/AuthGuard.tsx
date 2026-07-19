@@ -4,7 +4,7 @@ import { useAuthStore } from '@/lib/stores/authStore';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Loading from '@/components/ui/loading';
-import { AppNav } from '@/components/AppNav';
+import { AppShell } from '@/components/shell/AppShell';
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuthStore();
@@ -21,26 +21,13 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     }
   }, [ready, isAuthenticated, router]);
 
-  if (!ready) {
+  if (!ready || !isAuthenticated) {
     return (
-      <div className="min-h-screen bg-[#0F0F1A] flex items-center justify-center">
+      <div className="sa-page flex min-h-screen items-center justify-center">
         <Loading size="lg" />
       </div>
     );
   }
 
-  if (!isAuthenticated) {
-    return (
-      <div className="min-h-screen bg-[#0F0F1A] flex items-center justify-center">
-        <Loading size="lg" />
-      </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen bg-[#0F0F1A] text-white">
-      <AppNav />
-      {children}
-    </div>
-  );
+  return <AppShell>{children}</AppShell>;
 }

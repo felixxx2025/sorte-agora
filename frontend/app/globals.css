@@ -4,25 +4,37 @@
 
 @layer base {
   :root {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 45 93% 47%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 45 93% 47%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 45 93% 47%;
+    /* Casa chinesa — preto / vermelho / dourado */
+    --sa-bg: #0a0a0a;
+    --sa-bg-elevated: #141414;
+    --sa-surface: #1a1212;
+    --sa-surface-2: #241818;
+    --sa-red: #c41e3a;
+    --sa-red-dark: #8b0000;
+    --sa-gold: #ffd700;
+    --sa-gold-dim: #e6b800;
+    --sa-muted: #9a8a8a;
+    --sa-border: rgba(196, 30, 58, 0.35);
+
+    --background: 0 0% 4%;
+    --foreground: 40 30% 96%;
+    --card: 0 10% 8%;
+    --card-foreground: 40 30% 96%;
+    --popover: 0 10% 8%;
+    --popover-foreground: 40 30% 96%;
+    --primary: 45 100% 50%;
+    --primary-foreground: 0 0% 6%;
+    --secondary: 0 40% 18%;
+    --secondary-foreground: 40 30% 96%;
+    --muted: 0 10% 14%;
+    --muted-foreground: 0 8% 62%;
+    --accent: 348 74% 44%;
+    --accent-foreground: 40 30% 96%;
+    --destructive: 0 72% 42%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 348 40% 22%;
+    --input: 348 30% 16%;
+    --ring: 45 100% 50%;
     --radius: 0.5rem;
   }
 }
@@ -32,22 +44,42 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    background: var(--sa-bg);
+    color: hsl(var(--foreground));
     font-family: var(--font-inter), system-ui, sans-serif;
   }
-  h1, h2, h3, .sa-display {
+  h1,
+  h2,
+  h3,
+  .sa-display {
     font-family: var(--font-montserrat), var(--font-inter), system-ui, sans-serif;
   }
 }
 
 @layer utilities {
   .sa-gold {
-    @apply text-[#FFD700];
+    color: var(--sa-gold);
+  }
+  .sa-red {
+    color: var(--sa-red);
   }
   .sa-surface {
-    @apply bg-[#16213E] border border-white/10;
+    background: var(--sa-surface);
+    border: 1px solid var(--sa-border);
   }
   .sa-page {
-    @apply min-h-screen bg-[#0F0F1A] text-white;
+    @apply min-h-screen text-white;
+    background: radial-gradient(ellipse at top, #1a0a0c 0%, var(--sa-bg) 55%);
+  }
+  .sa-panel {
+    @apply rounded-lg border;
+    background: linear-gradient(180deg, var(--sa-surface-2) 0%, var(--sa-surface) 100%);
+    border-color: var(--sa-border);
+  }
+  .sa-chip {
+    @apply inline-flex items-center rounded px-2.5 py-1 text-xs font-semibold;
+    background: rgba(196, 30, 58, 0.2);
+    color: var(--sa-gold);
+    border: 1px solid var(--sa-border);
   }
 }
