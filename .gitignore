@@ -32,3 +32,5 @@ coverage/
 backups/
 frontend/test-results/
 playwright-report/
+backend/uploads/
+uploads/

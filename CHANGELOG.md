@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.2.0-faseB] — 2026-07-19
+
+### Added
+- PixProvider sandbox + webhook `POST /webhooks/pix` (idempotente)
+- Limites diários, autoexclusão, CasinoProvider demo/live
+- Cron de settlement esportivo; storage KYC local; MinIO no Compose
+- LGPD: export / delete / self-exclude; páginas `/terms` e `/privacy`
+- Wallet com QR PIX + polling de status
+
+### Status
+Maturidade ~85/100 — staging comercial com adapters; gateway PIX real e pentest na Fase C.
+
 ## [1.1.0-faseA] — 2026-07-19
 
 ### Added

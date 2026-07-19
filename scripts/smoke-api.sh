@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Smoke de integração API — Fase 3
+# Smoke de integração API — Fase B
 # Uso: ./scripts/smoke-api.sh  (requer backend em :3001)
 
 set -euo pipefail
@@ -22,6 +22,20 @@ curl -sf "$BASE/financial/balance" -H "Authorization: Bearer $TOKEN" | grep -q b
 
 echo "== casino games (cached) =="
 curl -sf "$BASE/casino/games" | grep -q '\[\|Crash\|Fortune\|Roulette\|Blackjack'
+
+echo "== lgpd export =="
+curl -sf "$BASE/users/me/export" -H "Authorization: Bearer $TOKEN" | grep -q exportedAt
+
+echo "== pix webhook idempotent path =="
+# Cria depósito PENDING se auto-confirm off; com auto-confirm on, webhook em id inexistente = 404
+# Smoke apenas garante endpoint público responde (não 401)
+WH=$(curl -s -o /tmp/wh.json -w '%{http_code}' -X POST "$BASE/webhooks/pix" \
+  -H 'Content-Type: application/json' \
+  -d '{"externalId":"pix_smoke_missing","status":"PAID"}')
+case "$WH" in
+  200|400|404) ;;
+  *) echo "unexpected webhook status $WH"; exit 1 ;;
+esac
 
 echo "== admin login + reports =="
 ALOGIN=$(curl -sf -X POST "$BASE/auth/login" -H 'Content-Type: application/json' \

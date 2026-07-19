@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { CacheService } from '../../common/services/cache.service';
 import { PrismaService } from '../../database/prisma.service';
 import { CasinoService } from './casino.service';
+import { CASINO_PROVIDER } from './providers/casino-provider.interface';
 
 describe('CasinoService', () => {
   let service: CasinoService;
@@ -15,6 +16,9 @@ describe('CasinoService', () => {
     casinoSession: {
       create: jest.fn(),
       findMany: jest.fn(),
+    },
+    user: {
+      findUnique: jest.fn(),
     },
   };
 
@@ -31,6 +35,14 @@ describe('CasinoService', () => {
     setJson: jest.fn().mockResolvedValue(undefined),
   };
 
+  const mockCasinoProvider = {
+    name: 'demo',
+    launch: jest.fn().mockResolvedValue({
+      gameUrl: 'http://localhost:3000/casino/play?game=x',
+      mode: 'demo',
+    }),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -38,11 +50,21 @@ describe('CasinoService', () => {
         { provide: PrismaService, useValue: mockPrismaService },
         { provide: ConfigService, useValue: mockConfigService },
         { provide: CacheService, useValue: mockCacheService },
+        { provide: CASINO_PROVIDER, useValue: mockCasinoProvider },
       ],
     }).compile();
 
     service = module.get<CasinoService>(CasinoService);
     jest.clearAllMocks();
+    mockPrismaService.user.findUnique.mockResolvedValue({
+      selfExcludedUntil: null,
+      deletedAt: null,
+      isActive: true,
+    });
+    mockCasinoProvider.launch.mockResolvedValue({
+      gameUrl: 'http://localhost:3000/casino/play?game=x',
+      mode: 'demo',
+    });
   });
 
   it('should be defined', () => {

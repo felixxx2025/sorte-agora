@@ -20,6 +20,11 @@ export class FinancialController {
     return this.financialService.createDeposit(user.id, depositDto);
   }
 
+  @Get('deposit/:id')
+  getDepositStatus(@CurrentUser() user: any, @Param('id') id: string) {
+    return this.financialService.getDepositStatus(user.id, id);
+  }
+
   @Post('deposit/:id/confirm')
   confirmDeposit(@CurrentUser() user: any, @Param('id') id: string) {
     return this.financialService.confirmDeposit(user.id, id);

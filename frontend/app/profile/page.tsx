@@ -327,6 +327,72 @@ function ProfileContent() {
             )}
           </CardContent>
         </Card>
+
+        <Card className="bg-[#16213E] border-white/10 lg:col-span-2">
+          <CardHeader>
+            <CardTitle className="text-gray-300">Privacidade (LGPD)</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-wrap gap-3">
+            <Button
+              className="bg-[#16213E] border border-white/20"
+              onClick={async () => {
+                try {
+                  const data = await usersApi.exportMyData();
+                  const blob = new Blob([JSON.stringify(data, null, 2)], {
+                    type: 'application/json',
+                  });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = 'sorte-agora-meus-dados.json';
+                  a.click();
+                  URL.revokeObjectURL(url);
+                  setMessage('Exportação baixada');
+                } catch (err: any) {
+                  setError(err?.message || 'Erro ao exportar');
+                }
+              }}
+            >
+              Exportar meus dados
+            </Button>
+            <Button
+              className="bg-[#16213E] border border-yellow-500/40 text-yellow-300"
+              onClick={async () => {
+                try {
+                  const res = await usersApi.selfExclude(30);
+                  setMessage(
+                    `Autoexclusão até ${new Date(res.selfExcludedUntil).toLocaleDateString()}`,
+                  );
+                } catch (err: any) {
+                  setError(err?.message || 'Erro na autoexclusão');
+                }
+              }}
+            >
+              Autoexcluir 30 dias
+            </Button>
+            <Button
+              className="bg-red-700"
+              onClick={async () => {
+                if (!confirm('Excluir e anonimizar sua conta? Esta ação não pode ser desfeita.')) {
+                  return;
+                }
+                try {
+                  await usersApi.deleteMyAccount();
+                  setMessage('Conta excluída');
+                  localStorage.clear();
+                  window.location.href = '/';
+                } catch (err: any) {
+                  setError(err?.message || 'Erro ao excluir conta');
+                }
+              }}
+            >
+              Excluir conta
+            </Button>
+            <a href="/privacy" className="text-sm text-[#FFD700] self-center hover:underline">
+              Política de Privacidade
+            </a>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

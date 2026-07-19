@@ -1,6 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { UsersService } from './users.service';
 import { PrismaService } from '../../database/prisma.service';
+import { StorageService } from '../../common/services/storage.service';
+import { MailService } from '../../common/services/mail.service';
 
 describe('UsersService', () => {
   let service: UsersService;
@@ -11,6 +13,18 @@ describe('UsersService', () => {
       findUnique: jest.fn(),
       update: jest.fn(),
     },
+    kyCRecord: {
+      findFirst: jest.fn(),
+      create: jest.fn(),
+    },
+  };
+
+  const mockStorage = {
+    saveDataUrl: jest.fn().mockResolvedValue({ key: 'k', url: 'http://x', driver: 'local' }),
+  };
+
+  const mockMail = {
+    sendMail: jest.fn().mockResolvedValue(undefined),
   };
 
   beforeEach(async () => {
@@ -21,6 +35,8 @@ describe('UsersService', () => {
           provide: PrismaService,
           useValue: mockPrismaService,
         },
+        { provide: StorageService, useValue: mockStorage },
+        { provide: MailService, useValue: mockMail },
       ],
     }).compile();
 
@@ -76,6 +92,7 @@ describe('UsersService', () => {
           mfaEnabled: true,
           vipPoints: true,
           vipLevelId: true,
+          selfExcludedUntil: true,
           account: true,
           createdAt: true,
         },

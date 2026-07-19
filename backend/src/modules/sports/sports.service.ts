@@ -56,6 +56,17 @@ export class SportsService {
   }
 
   async placeBet(userId: string, placeBetDto: PlaceBetDto) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { selfExcludedUntil: true, deletedAt: true, isActive: true },
+    });
+    if (!user || user.deletedAt || !user.isActive) {
+      throw new BadRequestException('Account unavailable');
+    }
+    if (user.selfExcludedUntil && user.selfExcludedUntil > new Date()) {
+      throw new BadRequestException('Self-exclusion active');
+    }
+
     const selection = await this.prisma.sportsSelection.findUnique({
       where: { id: placeBetDto.selectionId },
       include: { market: { include: { event: true } } },

@@ -127,7 +127,14 @@ export default function RegisterPage() {
             </div>
             <label className="flex items-center gap-2 text-gray-400 text-sm">
               <input type="checkbox" className="rounded" required />
-              Eu aceito os termos e condições
+              Eu aceito os{' '}
+              <Link href="/terms" className="text-[#FFD700] hover:underline">
+                Termos
+              </Link>{' '}
+              e a{' '}
+              <Link href="/privacy" className="text-[#FFD700] hover:underline">
+                Privacidade
+              </Link>
             </label>
             <button
               type="submit"

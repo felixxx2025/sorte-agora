@@ -29,6 +29,8 @@ model User {
   isBanned          Boolean   @default(false)
   banReason         String?
   bannedAt          DateTime?
+  selfExcludedUntil DateTime?
+  deletedAt         DateTime?
   
   mfaEnabled        Boolean   @default(false)
   mfaSecret         String?
@@ -127,6 +129,8 @@ model Transaction {
   
   method          String?
   pixKey          String?
+  externalId      String?  @unique
+  providerRef     String?
   
   status          String
   processedAt     DateTime?
@@ -136,6 +140,7 @@ model Transaction {
   @@index([userId])
   @@index([status])
   @@index([type])
+  @@index([externalId])
   @@map("transactions")
 }
 
@@ -196,6 +201,7 @@ model SportsEvent {
   startTime       DateTime
   isLive          Boolean  @default(false)
   status          String
+  winningSelectionId String?
   
   markets         SportsMarket[]
   bets            SportsBet[]

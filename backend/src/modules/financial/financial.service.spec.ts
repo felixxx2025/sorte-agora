@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../database/prisma.service';
 import { AffiliatesService } from '../affiliates/affiliates.service';
 import { FinancialService } from './financial.service';
+import { PIX_PROVIDER } from './providers/pix-provider.interface';
 
 describe('FinancialService', () => {
   let service: FinancialService;
@@ -22,6 +23,7 @@ describe('FinancialService', () => {
       findMany: jest.fn(),
       findFirst: jest.fn(),
       update: jest.fn(),
+      aggregate: jest.fn().mockResolvedValue({ _sum: { amount: 0 } }),
     },
     $transaction: jest.fn(),
   };
@@ -36,6 +38,18 @@ describe('FinancialService', () => {
 
   const mockAffiliatesService = {
     recordCommission: jest.fn().mockResolvedValue(null),
+  };
+
+  const mockPixProvider = {
+    name: 'sandbox',
+    createCharge: jest.fn().mockResolvedValue({
+      externalId: 'pix_test_1',
+      pixCode: 'PIXCODE',
+      qrCode: 'data:image/png;base64,xx',
+      providerRef: 'sandbox',
+      expiresAt: new Date(),
+    }),
+    parseWebhook: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -54,12 +68,29 @@ describe('FinancialService', () => {
           provide: AffiliatesService,
           useValue: mockAffiliatesService,
         },
+        {
+          provide: PIX_PROVIDER,
+          useValue: mockPixProvider,
+        },
       ],
     }).compile();
 
     service = module.get<FinancialService>(FinancialService);
     jest.clearAllMocks();
-    mockPrismaService.user.findUnique.mockResolvedValue({ referredById: null });
+    mockPrismaService.user.findUnique.mockResolvedValue({
+      referredById: null,
+      selfExcludedUntil: null,
+      deletedAt: null,
+      isActive: true,
+    });
+    mockPrismaService.transaction.aggregate.mockResolvedValue({ _sum: { amount: 0 } });
+    mockPixProvider.createCharge.mockResolvedValue({
+      externalId: 'pix_test_1',
+      pixCode: 'PIXCODE',
+      qrCode: 'data:image/png;base64,xx',
+      providerRef: 'sandbox',
+      expiresAt: new Date(),
+    });
   });
 
   it('should be defined', () => {
@@ -135,7 +166,12 @@ describe('FinancialService', () => {
       };
 
       mockPrismaService.account.findUnique.mockResolvedValue(mockAccount);
-      mockPrismaService.user.findUnique.mockResolvedValue({ referredById: 'aff-user' });
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        referredById: 'aff-user',
+        selfExcludedUntil: null,
+        deletedAt: null,
+        isActive: true,
+      });
       mockPrismaService.$transaction.mockImplementation(async (cb) =>
         cb({
           transaction: {

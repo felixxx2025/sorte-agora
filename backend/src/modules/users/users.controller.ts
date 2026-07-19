@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Put, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Post, Put, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../../common/guards/auth.guard';
 import { CurrentUser } from '../../common/decorators/user.decorator';
 import { UsersService } from './users.service';
@@ -28,5 +28,20 @@ export class UsersController {
   @Get('kyc')
   getKycStatus(@CurrentUser() user: any) {
     return this.usersService.getKycStatus(user.id);
+  }
+
+  @Get('me/export')
+  exportMyData(@CurrentUser() user: any) {
+    return this.usersService.exportMyData(user.id);
+  }
+
+  @Delete('me')
+  deleteMyAccount(@CurrentUser() user: any) {
+    return this.usersService.deleteMyAccount(user.id);
+  }
+
+  @Post('me/self-exclude')
+  selfExclude(@CurrentUser() user: any, @Body() body: { days: number }) {
+    return this.usersService.selfExclude(user.id, Number(body.days));
   }
 }

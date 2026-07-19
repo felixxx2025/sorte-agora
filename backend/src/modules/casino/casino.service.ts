@@ -1,5 +1,7 @@
 import {
   BadRequestException,
+  ForbiddenException,
+  Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -8,6 +10,10 @@ import * as crypto from 'crypto';
 import { CacheService } from '../../common/services/cache.service';
 import { PrismaService } from '../../database/prisma.service';
 import { LaunchGameDto } from './dto/launch-game.dto';
+import {
+  CASINO_PROVIDER,
+  CasinoProvider,
+} from './providers/casino-provider.interface';
 
 @Injectable()
 export class CasinoService {
@@ -15,6 +21,7 @@ export class CasinoService {
     private prisma: PrismaService,
     private configService: ConfigService,
     private cache: CacheService,
+    @Inject(CASINO_PROVIDER) private casinoProvider: CasinoProvider,
   ) {}
 
   async getGames(category?: string) {
@@ -47,6 +54,8 @@ export class CasinoService {
     gameId: string,
     launchGameDto: LaunchGameDto & { userId: string },
   ) {
+    await this.assertPlayAllowed(launchGameDto.userId);
+
     const game = await this.prisma.casinoGame.findUnique({
       where: { id: gameId },
     });
@@ -68,14 +77,23 @@ export class CasinoService {
       },
     });
 
-    const gameUrl = this.buildProviderUrl(game, sessionToken);
+    const launch = await this.casinoProvider.launch({
+      game: {
+        id: game.id,
+        name: game.name,
+        provider: game.provider,
+        providerGameId: game.providerGameId,
+      },
+      sessionToken,
+      userId: launchGameDto.userId,
+    });
 
     return {
       sessionId: session.id,
       sessionToken,
-      gameUrl,
+      gameUrl: launch.gameUrl,
       provider: game.provider,
-      mode: this.configService.get('CASINO_PROVIDER_MODE') || 'demo',
+      mode: launch.mode,
       expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
     };
   }
@@ -89,23 +107,20 @@ export class CasinoService {
     });
   }
 
-  private generateSessionToken(): string {
-    return crypto.randomBytes(24).toString('hex');
+  private async assertPlayAllowed(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { selfExcludedUntil: true, deletedAt: true, isActive: true },
+    });
+    if (!user || user.deletedAt || !user.isActive) {
+      throw new ForbiddenException('Account unavailable');
+    }
+    if (user.selfExcludedUntil && user.selfExcludedUntil > new Date()) {
+      throw new ForbiddenException('Self-exclusion active');
+    }
   }
 
-  private buildProviderUrl(game: any, sessionToken: string): string {
-    const mode = this.configService.get('CASINO_PROVIDER_MODE') || 'demo';
-    const base =
-      this.configService.get('CASINO_PROVIDER_BASE_URL') ||
-      'https://demo-casino.sorteagora.local';
-
-    if (mode === 'live') {
-      return `${base}/launch/${game.provider}/${game.providerGameId}?token=${sessionToken}`;
-    }
-
-    // Demo adapter: página local simulada (Fase 2)
-    const frontend =
-      this.configService.get('FRONTEND_URL') || 'http://localhost:3000';
-    return `${frontend}/casino/play?game=${encodeURIComponent(game.providerGameId)}&token=${sessionToken}&name=${encodeURIComponent(game.name)}`;
+  private generateSessionToken(): string {
+    return crypto.randomBytes(24).toString('hex');
   }
 }

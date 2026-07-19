@@ -7,10 +7,10 @@
 
 - [ ] `docker compose up -d postgres redis` saudáveis
 - [ ] `npx prisma migrate deploy` + `npx prisma db seed`
-- [ ] `cd backend && npm test` (80+ verdes)
+- [ ] `cd backend && npm test` (89+ verdes)
 - [ ] `./scripts/smoke-api.sh` OK
 - [ ] Secrets reais: `JWT_SECRET`, `ENCRYPTION_KEY`, `DB_PASSWORD` (não defaults)
-- [ ] `PIX_AUTO_CONFIRM=false` se houver gateway real
+- [ ] `PIX_AUTO_CONFIRM=false` + testar `POST /webhooks/pix` com `externalId`
 - [ ] `CASINO_PROVIDER_MODE=live` + `CASINO_PROVIDER_BASE_URL` configurados
 - [ ] SMTP real ou fila de e-mail
 - [ ] CORS_ORIGIN aponta para domínio público
@@ -18,15 +18,15 @@
 - [ ] Health: `GET /api/health` → 200 com `status: ok`
 - [ ] Admin consegue login e ver `/admin`
 - [ ] Fluxo: register → deposit → bet/casino → withdraw pending
+- [ ] LGPD: export + delete smoke no staging
 
 ## Não bloqueante (backlog)
 
 - [ ] E2E Playwright com `E2E_API=1` no CI
 - [ ] CDN / WAF / rate limit edge
-- [ ] KYC com storage S3 real
-- [ ] Settlement automático de odds
-- [ ] LGPD export/delete self-service completo
+- [ ] Gateway PIX produção (MercadoPago/Pagar.me) além do sandbox
 - [ ] Pentest externo
+- [ ] `SPORTS_AUTO_SETTLE_LOST` off em prod; usar `winningSelectionId`
 
 ## Rollback
 

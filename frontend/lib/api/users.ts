@@ -53,4 +53,19 @@ export const usersApi = {
     const response = await apiClient.get('/users/kyc');
     return response.data;
   },
+
+  async exportMyData() {
+    const response = await apiClient.get('/users/me/export');
+    return response.data;
+  },
+
+  async deleteMyAccount() {
+    const response = await apiClient.delete('/users/me');
+    return response.data;
+  },
+
+  async selfExclude(days: number) {
+    const response = await apiClient.post('/users/me/self-exclude', { days });
+    return response.data;
+  },
 };

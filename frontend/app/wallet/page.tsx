@@ -5,8 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import Loading from '@/components/ui/loading';
+import { financialApi } from '@/lib/api';
 import { useBalance, useDeposit, useTransactions, useWithdraw } from '@/lib/hooks';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 function WalletContent() {
   const [depositAmount, setDepositAmount] = useState('');
@@ -15,24 +16,62 @@ function WalletContent() {
   const [activeTab, setActiveTab] = useState<'deposit' | 'withdraw'>('deposit');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [pendingPix, setPendingPix] = useState<{
+    transactionId: string;
+    pixCode: string;
+    qrCode: string;
+    externalId?: string;
+    status: string;
+  } | null>(null);
 
-  const { data: balance, isLoading: balanceLoading } = useBalance();
-  const { data: transactions, isLoading: transactionsLoading } = useTransactions();
+  const { data: balance, isLoading: balanceLoading, refetch: refetchBalance } = useBalance();
+  const { data: transactions, isLoading: transactionsLoading, refetch: refetchTx } =
+    useTransactions();
   const deposit = useDeposit();
   const withdraw = useWithdraw();
 
   const isLoading = balanceLoading || transactionsLoading;
 
+  useEffect(() => {
+    if (!pendingPix || pendingPix.status === 'COMPLETED') return;
+    const id = setInterval(async () => {
+      try {
+        const status: any = await financialApi.getDepositStatus(pendingPix.transactionId);
+        if (status?.status === 'COMPLETED') {
+          setPendingPix((p) => (p ? { ...p, status: 'COMPLETED' } : p));
+          setMessage(
+            `PIX confirmado! Saldo: R$ ${Number(status.balance ?? 0).toFixed(2)}`,
+          );
+          refetchBalance();
+          refetchTx();
+        }
+      } catch {
+        // keep polling
+      }
+    }, 3000);
+    return () => clearInterval(id);
+  }, [pendingPix, refetchBalance, refetchTx]);
+
   const handleDeposit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setMessage('');
+    setPendingPix(null);
     try {
       const result: any = await deposit.mutateAsync({ amount: parseFloat(depositAmount) });
       if (result?.status === 'COMPLETED' || result?.autoConfirmed) {
-        setMessage(`Depósito confirmado! Novo saldo: R$ ${Number(result.balance ?? 0).toFixed(2)}`);
+        setMessage(
+          `Depósito confirmado! Novo saldo: R$ ${Number(result.balance ?? 0).toFixed(2)}`,
+        );
       } else {
-        setMessage('Depósito solicitado. Aguardando confirmação PIX.');
+        setPendingPix({
+          transactionId: result.transactionId,
+          pixCode: result.pixCode,
+          qrCode: result.qrCode,
+          externalId: result.externalId,
+          status: result.status || 'PENDING',
+        });
+        setMessage('PIX gerado. Aguardando pagamento/webhook…');
       }
       setDepositAmount('');
     } catch (err: any) {
@@ -130,6 +169,26 @@ function WalletContent() {
                     {deposit.isPending ? 'Processando...' : 'Depositar'}
                   </Button>
                 </form>
+
+                {pendingPix && (
+                  <div className="mt-6 space-y-3 border-t border-white/10 pt-4">
+                    <p className="text-sm text-gray-400">
+                      Status: <span className="text-[#FFD700]">{pendingPix.status}</span>
+                      {pendingPix.externalId && (
+                        <span className="block text-xs mt-1 font-mono">{pendingPix.externalId}</span>
+                      )}
+                    </p>
+                    {pendingPix.qrCode?.startsWith('data:') && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={pendingPix.qrCode}
+                        alt="QR PIX"
+                        className="w-40 h-40 bg-white rounded mx-auto object-contain"
+                      />
+                    )}
+                    <p className="text-xs text-gray-500 break-all font-mono">{pendingPix.pixCode}</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           )}
@@ -192,7 +251,8 @@ function WalletContent() {
                       <div>
                         <p className="font-medium">{tx.type}</p>
                         <p className="text-sm text-gray-400">
-                          {tx.createdAt ? new Date(tx.createdAt).toLocaleDateString() : '—'} · {tx.status}
+                          {tx.createdAt ? new Date(tx.createdAt).toLocaleDateString() : '—'} ·{' '}
+                          {tx.status}
                         </p>
                       </div>
                       <p

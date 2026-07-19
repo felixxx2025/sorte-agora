@@ -62,7 +62,12 @@ describe('SportsService', () => {
 
     service = module.get<SportsService>(SportsService);
     jest.clearAllMocks();
-    mockPrismaService.user.findUnique.mockResolvedValue({ referredById: null });
+    mockPrismaService.user.findUnique.mockResolvedValue({
+      referredById: null,
+      selfExcludedUntil: null,
+      deletedAt: null,
+      isActive: true,
+    });
   });
 
   it('should be defined', () => {

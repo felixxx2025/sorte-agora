@@ -45,8 +45,18 @@ export const financialApi = {
     return response.data;
   },
 
-  async deposit(data: DepositInput): Promise<Transaction> {
+  async deposit(data: DepositInput): Promise<any> {
     const response = await apiClient.post('/financial/deposit', data);
+    return response.data;
+  },
+
+  async getDepositStatus(id: string): Promise<any> {
+    const response = await apiClient.get(`/financial/deposit/${id}`);
+    return response.data;
+  },
+
+  async confirmDeposit(id: string): Promise<any> {
+    const response = await apiClient.post(`/financial/deposit/${id}/confirm`);
     return response.data;
   },
 

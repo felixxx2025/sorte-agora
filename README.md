@@ -4,13 +4,19 @@
 
 | Campo | Valor |
 |-------|-------|
-| **Versão** | 1.1.0-faseA |
-| **Fase atual** | **Fase A — Integração & Correção concluída** |
-| **Maturidade** | ~78/100 (ver `GO_LIVE.md`) |
+| **Versão** | 1.2.0-faseB |
+| **Fase atual** | **Fase B — Implementação concluída** |
+| **Maturidade** | ~85/100 (ver `GO_LIVE.md`) |
 | **Domínio** | Apostas (cassino + esportes) — **não** rifas |
 | **Última atualização** | 19 de julho de 2026 |
 
 > Documentos antigos que afirmam “92/100 pronto para produção” estão **desatualizados**. A fonte de verdade é [`STATUS.md`](./STATUS.md).
+
+## O que a Fase B entregou
+
+- PIX provider + webhook, limites, casino live adapter, settlement cron
+- KYC storage, LGPD self-service, termos/privacidade, wallet QR
+- Testes: **89** unit + smoke + E2E **7/7** — `docs/test-results/fase-B.md`
 
 ## O que a Fase A entregou
 
