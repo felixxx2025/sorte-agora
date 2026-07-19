@@ -5,13 +5,17 @@ import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 
 function AnimatedAmount({ value }: { value: number }) {
-  const [displayed, setDisplayed] = useState(value);
-  const prevRef = useRef(value);
+  const safe = Number.isFinite(value) ? value : 0;
+  const [displayed, setDisplayed] = useState(safe);
+  const prevRef = useRef(safe);
 
   useEffect(() => {
-    if (prevRef.current === value) return;
+    const end = Number.isFinite(value) ? value : 0;
+    if (prevRef.current === end) {
+      setDisplayed(end);
+      return;
+    }
     const start = prevRef.current;
-    const end = value;
     const duration = 800;
     const startTime = performance.now();
 
@@ -29,7 +33,11 @@ function AnimatedAmount({ value }: { value: number }) {
 
   return (
     <span>
-      R$ {displayed.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+      R${' '}
+      {displayed.toLocaleString('pt-BR', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })}
     </span>
   );
 }
@@ -46,27 +54,34 @@ export function JackpotTicker() {
         Jackpots ao vivo
       </h2>
       <div className="flex gap-3 overflow-x-auto pb-1 -mx-4 px-4 snap-x snap-mandatory">
-        {jackpots.map((j) => (
-          <Link
-            key={j.id}
-            href={`/casino/${j.id}`}
-            className="snap-start flex-shrink-0 w-44 sa-panel p-3 hover:border-sa-gold/60 transition group"
-            style={{ background: 'linear-gradient(135deg,#1a0a0a,#2d1000 80%)' }}
-          >
-            {j.thumbnailUrl && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={j.thumbnailUrl}
-                alt={j.name}
-                className="w-full h-16 object-cover rounded mb-2"
-              />
-            )}
-            <p className="text-xs text-sa-muted truncate">{j.name}</p>
-            <p className="font-display text-base font-extrabold text-sa-gold mt-0.5">
-              <AnimatedAmount value={j.amount} />
-            </p>
-          </Link>
-        ))}
+        {jackpots.map((j) => {
+          const amount = Number(
+            (j as any).amount ?? (j as any).jackpotAmount ?? 0,
+          );
+          const thumb =
+            (j as any).thumbnailUrl || (j as any).thumbnail || undefined;
+          return (
+            <Link
+              key={j.id}
+              href={`/casino/${j.id}`}
+              className="snap-start flex-shrink-0 w-44 sa-panel p-3 hover:border-sa-gold/60 transition group"
+              style={{ background: 'linear-gradient(135deg,#1a0a0a,#2d1000 80%)' }}
+            >
+              {thumb && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={thumb}
+                  alt={j.name}
+                  className="w-full h-16 object-cover rounded mb-2"
+                />
+              )}
+              <p className="text-xs text-sa-muted truncate">{j.name}</p>
+              <p className="font-display text-base font-extrabold text-sa-gold mt-0.5">
+                <AnimatedAmount value={amount} />
+              </p>
+            </Link>
+          );
+        })}
       </div>
     </section>
   );

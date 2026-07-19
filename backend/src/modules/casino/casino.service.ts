@@ -57,10 +57,20 @@ export class CasinoService {
   }
 
   async getJackpots() {
-    return this.prisma.casinoGame.findMany({
+    const games = await this.prisma.casinoGame.findMany({
       where: { hasJackpot: true, isActive: true },
       orderBy: { jackpotAmount: "desc" },
     });
+
+    return games.map((g) => ({
+      id: g.id,
+      name: g.name,
+      amount: Number(g.jackpotAmount ?? 0),
+      currency: "BRL",
+      thumbnailUrl: g.thumbnail,
+      category: g.category,
+      slug: g.slug,
+    }));
   }
 
   async launchGame(

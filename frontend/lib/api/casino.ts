@@ -75,7 +75,14 @@ export const casinoApi = {
 
   async getJackpots(): Promise<JackpotGame[]> {
     const response = await apiClient.get('/casino/jackpots');
-    return Array.isArray(response.data) ? response.data : [];
+    const raw = Array.isArray(response.data) ? response.data : [];
+    return raw.map((g: any) => ({
+      id: g.id,
+      name: g.name,
+      amount: Number(g.amount ?? g.jackpotAmount ?? 0),
+      currency: g.currency || 'BRL',
+      thumbnailUrl: g.thumbnailUrl || g.thumbnail,
+    }));
   },
 
   async launchDemo(id: string): Promise<LaunchGameResponse> {
