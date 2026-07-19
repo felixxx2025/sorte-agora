@@ -4,6 +4,7 @@ import { ConfigService } from "@nestjs/config";
 /**
  * Feature flags via env (Fase C).
  * ENABLE_CASINO / ENABLE_SPORTS / ENABLE_VIP / ENABLE_AFFILIATES / ENABLE_LGPD
+ * ENABLE_CRASH / ENABLE_CHAT
  */
 @Injectable()
 export class FeatureFlagsService {
@@ -35,6 +36,14 @@ export class FeatureFlagsService {
     return this.flag("ENABLE_LGPD", true);
   }
 
+  get crash() {
+    return this.flag("ENABLE_CRASH");
+  }
+
+  get chat() {
+    return this.flag("ENABLE_CHAT");
+  }
+
   snapshot() {
     return {
       casino: this.casino,
@@ -42,6 +51,8 @@ export class FeatureFlagsService {
       vip: this.vip,
       affiliates: this.affiliates,
       lgpd: this.lgpd,
+      crash: this.crash,
+      chat: this.chat,
       pixAutoConfirm: this.config.get("PIX_AUTO_CONFIRM") === "true",
       pixProviderMode: this.config.get("PIX_PROVIDER_MODE") || "sandbox",
       casinoMode: this.config.get("CASINO_PROVIDER_MODE") || "demo",

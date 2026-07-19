@@ -6,4 +6,7 @@ export { DepositSchema, WithdrawSchema, financialApi, type Account, type Deposit
 export { PlaceBetSchema, sportsApi, type PlaceBetInput, type SportsBet, type SportsEvent, type SportsMarket, type SportsSelection } from './sports';
 export { UpdateUserSchema, usersApi, type UpdateUserInput, type User } from './users';
 export { vipApi, type Mission, type Missions, type VipLevel, type VipStatus } from './vip';
+export { promosApi, CreatePromoSchema, type Promo, type CreatePromoInput } from './promos';
+export { crashApi, type CrashState, type PlaceCrashBetInput, type CrashBetResult } from './crash';
+export { chatApi, type ChatMessage } from './chat';
 

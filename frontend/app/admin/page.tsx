@@ -22,6 +22,7 @@ import {
   useSettleSportsBet,
   useUnbanUser,
 } from '@/lib/hooks';
+import { useCreatePromo, useDeletePromo, usePromos } from '@/lib/hooks/usePromos';
 import { useEffect, useState } from 'react';
 
 type Tab =
@@ -31,7 +32,8 @@ type Tab =
   | 'kyc'
   | 'sports'
   | 'bonuses'
-  | 'reports';
+  | 'reports'
+  | 'promos';
 
 const TAB_LABELS: Record<Tab, string> = {
   overview: 'Visão geral',
@@ -41,6 +43,7 @@ const TAB_LABELS: Record<Tab, string> = {
   sports: 'Apostas',
   bonuses: 'Bônus',
   reports: 'Relatórios',
+  promos: 'Promoções',
 };
 
 function AdminContent() {
@@ -53,6 +56,7 @@ function AdminContent() {
     amount: '10',
   });
   const [assignUserId, setAssignUserId] = useState('');
+  const [promoForm, setPromoForm] = useState({ title: '', subtitle: '', href: '', sortOrder: '0' });
 
   const { data: dashboard, isLoading: dashLoading } = useAdminDashboard();
   const { data: users, isLoading: usersLoading } = useAdminUsers();
@@ -60,12 +64,15 @@ function AdminContent() {
   const { data: reports } = useAdminReports();
   const { data: pendingBets, refetch: refetchBets } = usePendingSportsBets();
   const { data: bonuses } = useAdminBonuses();
+  const { data: promos } = usePromos();
   const banUser = useBanUser();
   const unbanUser = useUnbanUser();
   const approve = useApproveWithdrawal();
   const reject = useRejectWithdrawal();
   const settle = useSettleSportsBet();
   const createBonus = useCreateBonus();
+  const createPromo = useCreatePromo();
+  const deletePromo = useDeletePromo();
   const deleteBonus = useDeleteBonus();
   const assignBonus = useAssignBonus();
   const settleCommissions = useSettleAffiliateCommissions();
@@ -531,6 +538,105 @@ function AdminContent() {
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {tab === 'promos' && (
+        <div className="space-y-6">
+          <Card className="bg-[#16213E] border-white/10">
+            <CardHeader>
+              <CardTitle>Criar promoção</CardTitle>
+            </CardHeader>
+            <CardContent className="grid md:grid-cols-4 gap-3">
+              <Input
+                placeholder="Título"
+                value={promoForm.title}
+                onChange={(e) => setPromoForm({ ...promoForm, title: e.target.value })}
+                className="bg-[#0F0F1A] border-white/10 text-white"
+              />
+              <Input
+                placeholder="Subtítulo"
+                value={promoForm.subtitle}
+                onChange={(e) => setPromoForm({ ...promoForm, subtitle: e.target.value })}
+                className="bg-[#0F0F1A] border-white/10 text-white"
+              />
+              <Input
+                placeholder="Link (href)"
+                value={promoForm.href}
+                onChange={(e) => setPromoForm({ ...promoForm, href: e.target.value })}
+                className="bg-[#0F0F1A] border-white/10 text-white"
+              />
+              <div className="flex gap-2">
+                <Input
+                  type="number"
+                  placeholder="Ordem"
+                  value={promoForm.sortOrder}
+                  onChange={(e) => setPromoForm({ ...promoForm, sortOrder: e.target.value })}
+                  className="bg-[#0F0F1A] border-white/10 text-white w-24"
+                />
+                <Button
+                  className="bg-[#FFD700] text-[#1A1A2E] flex-shrink-0"
+                  disabled={createPromo.isPending || !promoForm.title}
+                  onClick={async () => {
+                    setError('');
+                    try {
+                      await createPromo.mutateAsync({
+                        title: promoForm.title,
+                        subtitle: promoForm.subtitle || undefined,
+                        href: promoForm.href || undefined,
+                        sortOrder: parseInt(promoForm.sortOrder) || 0,
+                      });
+                      setMessage('Promoção criada');
+                      setPromoForm({ title: '', subtitle: '', href: '', sortOrder: '0' });
+                    } catch (e: any) {
+                      setError(e?.message || 'Erro ao criar promoção');
+                    }
+                  }}
+                >
+                  Criar
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-[#16213E] border-white/10">
+            <CardHeader>
+              <CardTitle>Promoções ativas</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {!promos || promos.length === 0 ? (
+                <p className="text-gray-400">Nenhuma promoção cadastrada.</p>
+              ) : (
+                promos.map((p) => (
+                  <div
+                    key={p.id}
+                    className="flex justify-between items-center border-b border-white/5 pb-2 gap-2"
+                  >
+                    <div>
+                      <p className="font-medium text-white">{p.title}</p>
+                      <p className="text-xs text-gray-400">
+                        {p.subtitle} {p.href ? `· ${p.href}` : ''} · ordem {p.sortOrder}
+                      </p>
+                    </div>
+                    <Button
+                      className="bg-red-600 text-xs"
+                      onClick={async () => {
+                        setError('');
+                        try {
+                          await deletePromo.mutateAsync(p.id);
+                          setMessage('Promoção removida');
+                        } catch (e: any) {
+                          setError(e?.message || 'Erro ao remover');
+                        }
+                      }}
+                    >
+                      Remover
+                    </Button>
+                  </div>
+                ))
+              )}
+            </CardContent>
+          </Card>
+        </div>
       )}
     </div>
   );

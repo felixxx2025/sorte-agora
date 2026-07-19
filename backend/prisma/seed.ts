@@ -116,27 +116,111 @@ async function main() {
     });
   }
 
+  const liveCasino = await prisma.casinoGame.findFirst({
+    where: { category: "live" },
+  });
+  if (!liveCasino) {
+    await prisma.casinoGame.create({
+      data: {
+        provider: "DEMO",
+        providerGameId: "live-roulette-eu",
+        name: "Roleta ao Vivo",
+        category: "live",
+        thumbnail: "/games/live-roulette.png",
+        rtp: 97.3,
+        minBet: 1,
+        maxBet: 5000,
+      },
+    });
+  }
+
+  const banners = [
+    {
+      title: "Bônus de Boas-Vindas",
+      subtitle: "100% até R$ 500 no primeiro depósito",
+      imageUrl: "/promos/welcome.png",
+      href: "/promocoes/boas-vindas",
+      sortOrder: 1,
+    },
+    {
+      title: "Crash X",
+      subtitle: "Multiplique antes do crash — demo ao vivo",
+      imageUrl: "/promos/crash.png",
+      href: "/crash",
+      sortOrder: 2,
+    },
+    {
+      title: "Esporte ao Vivo",
+      subtitle: "Aposte enquanto o jogo acontece",
+      imageUrl: "/promos/live-sports.png",
+      href: "/esportes?live=1",
+      sortOrder: 3,
+    },
+  ];
+
+  for (const banner of banners) {
+    const existing = await prisma.promoBanner.findFirst({
+      where: { title: banner.title },
+    });
+    if (!existing) {
+      await prisma.promoBanner.create({ data: banner });
+    } else {
+      await prisma.promoBanner.update({
+        where: { id: existing.id },
+        data: { ...banner, isActive: true },
+      });
+    }
+  }
+
   const startTime = new Date(Date.now() + 2 * 60 * 60 * 1000);
   const existingEvent = await prisma.sportsEvent.findFirst({
-    where: { name: 'Flamengo vs Palmeiras' },
+    where: { name: "Flamengo vs Palmeiras" },
   });
 
   if (!existingEvent) {
     await prisma.sportsEvent.create({
       data: {
-        name: 'Flamengo vs Palmeiras',
+        name: "Flamengo vs Palmeiras",
         startTime,
         isLive: false,
-        status: 'SCHEDULED',
+        status: "SCHEDULED",
         markets: {
           create: [
             {
-              name: 'Resultado Final',
+              name: "Resultado Final",
               selections: {
                 create: [
-                  { name: 'Flamengo', odds: 2.1 },
-                  { name: 'Empate', odds: 3.2 },
-                  { name: 'Palmeiras', odds: 3.4 },
+                  { name: "Flamengo", odds: 2.1 },
+                  { name: "Empate", odds: 3.2 },
+                  { name: "Palmeiras", odds: 3.4 },
+                ],
+              },
+            },
+          ],
+        },
+      },
+    });
+  }
+
+  const liveEvent = await prisma.sportsEvent.findFirst({
+    where: { isLive: true },
+  });
+  if (!liveEvent) {
+    await prisma.sportsEvent.create({
+      data: {
+        name: "Brasil vs Argentina (AO VIVO)",
+        startTime: new Date(),
+        isLive: true,
+        status: "LIVE",
+        markets: {
+          create: [
+            {
+              name: "Resultado Final",
+              selections: {
+                create: [
+                  { name: "Brasil", odds: 2.4 },
+                  { name: "Empate", odds: 3.1 },
+                  { name: "Argentina", odds: 2.9 },
                 ],
               },
             },

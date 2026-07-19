@@ -6,6 +6,8 @@ import {
 import { PrismaService } from "../../database/prisma.service";
 import { AffiliatesService } from "../affiliates/affiliates.service";
 import { FinancialService } from "../financial/financial.service";
+import { CreatePromoDto } from "../promos/dto/create-promo.dto";
+import { PromosService } from "../promos/promos.service";
 import { SportsService } from "../sports/sports.service";
 import { BanUserDto } from "./dto/ban-user.dto";
 import { UpdateBonusDto } from "./dto/update-bonus.dto";
@@ -17,6 +19,7 @@ export class AdminService {
     private sportsService: SportsService,
     private financialService: FinancialService,
     private affiliatesService: AffiliatesService,
+    private promosService: PromosService,
   ) {}
 
   async getDashboard() {
@@ -281,5 +284,21 @@ export class AdminService {
 
   async payAffiliateCommission(commissionId: string) {
     return this.affiliatesService.markCommissionPaid(commissionId);
+  }
+
+  listPromos() {
+    return this.promosService.listAll();
+  }
+
+  createPromo(dto: CreatePromoDto) {
+    return this.promosService.create(dto);
+  }
+
+  updatePromo(id: string, dto: Partial<CreatePromoDto>) {
+    return this.promosService.update(id, dto);
+  }
+
+  deletePromo(id: string) {
+    return this.promosService.remove(id);
   }
 }

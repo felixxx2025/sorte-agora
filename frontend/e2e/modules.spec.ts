@@ -9,7 +9,7 @@ async function loginAs(
   await page.fill('input[type="email"]', email);
   await page.fill('input[type="password"]', password);
   await page.click('button[type="submit"]');
-  await expect(page).toHaveURL(/dashboard/, { timeout: 20000 });
+  await expect(page).toHaveURL(/home|dashboard/, { timeout: 20000 });
 }
 
 test.describe('VIP e Afiliados', () => {

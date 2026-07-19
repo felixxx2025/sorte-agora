@@ -5,7 +5,7 @@ async function loginAsDemo(page: import('@playwright/test').Page) {
   await page.fill('input[type="email"]', 'demo@sorteagora.com');
   await page.fill('input[type="password"]', 'User1234!');
   await page.click('button[type="submit"]');
-  await expect(page).toHaveURL(/dashboard/, { timeout: 15000 });
+  await expect(page).toHaveURL(/home|dashboard/, { timeout: 15000 });
 }
 
 test.describe('Sports', () => {

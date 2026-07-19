@@ -5,7 +5,7 @@ async function loginAsDemo(page: import('@playwright/test').Page) {
   await page.fill('input[type="email"]', 'demo@sorteagora.com');
   await page.fill('input[type="password"]', 'User1234!');
   await page.click('button[type="submit"]');
-  await expect(page).toHaveURL(/dashboard/, { timeout: 15000 });
+  await expect(page).toHaveURL(/home|dashboard/, { timeout: 15000 });
 }
 
 test.describe('Wallet', () => {
@@ -16,7 +16,7 @@ test.describe('Wallet', () => {
 
   test('exibe carteira e permite depósito demo', async ({ page }) => {
     await page.goto('/wallet');
-    await expect(page.getByRole('heading', { name: /Carteira|Wallet|Saldo/i }).first()).toBeVisible({
+    await expect(page.getByRole('heading', { name: /Caixa|Carteira|Wallet|Saldo/i }).first()).toBeVisible({
       timeout: 15000,
     });
     const amount = page.locator('input[type="number"]').first();

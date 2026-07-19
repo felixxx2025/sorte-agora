@@ -130,4 +130,24 @@ export class AdminController {
   payAffiliateCommission(@Param("id") id: string) {
     return this.adminService.payAffiliateCommission(id);
   }
+
+  @Get("promos")
+  listPromos() {
+    return this.adminService.listPromos();
+  }
+
+  @Post("promos")
+  createPromo(@Body() body: any) {
+    return this.adminService.createPromo(body);
+  }
+
+  @Put("promos/:id")
+  updatePromo(@Param("id") id: string, @Body() body: any) {
+    return this.adminService.updatePromo(id, body);
+  }
+
+  @Delete("promos/:id")
+  deletePromo(@Param("id") id: string) {
+    return this.adminService.deletePromo(id);
+  }
 }

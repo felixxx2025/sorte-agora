@@ -26,13 +26,19 @@ describe("FeatureFlagsService", () => {
     expect(service.casino).toBe(true);
     expect(service.sports).toBe(true);
     expect(service.lgpd).toBe(true);
+    expect(service.crash).toBe(true);
+    expect(service.chat).toBe(true);
   });
 
   it("respects false flags", () => {
     values.ENABLE_CASINO = "false";
     values.ENABLE_SPORTS = "0";
+    values.ENABLE_CRASH = "false";
+    values.ENABLE_CHAT = "0";
     expect(service.casino).toBe(false);
     expect(service.sports).toBe(false);
+    expect(service.crash).toBe(false);
+    expect(service.chat).toBe(false);
   });
 
   it("snapshot includes modes", () => {
@@ -41,5 +47,7 @@ describe("FeatureFlagsService", () => {
     const snap = service.snapshot();
     expect(snap.pixAutoConfirm).toBe(true);
     expect(snap.casinoMode).toBe("live");
+    expect(snap.crash).toBe(true);
+    expect(snap.chat).toBe(true);
   });
 });

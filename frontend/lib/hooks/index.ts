@@ -63,3 +63,6 @@ export {
   useAssignBonus,
   useSettleAffiliateCommissions,
 } from './useAdmin';
+export { usePromos, useCreatePromo, useDeletePromo } from './usePromos';
+export { useCrashState, usePlaceCrashBet, useCrashCashout } from './useCrash';
+export { useChatMessages, useSendChatMessage } from './useChat';

@@ -62,6 +62,7 @@ model User {
   sportsBets        SportsBet[]
   auditLogs         AuditLog[]
   missionProgress   VipMissionProgress[]
+  chatMessages      ChatMessage[]
   
   @@index([email])
   @@index([isKycVerified])
@@ -405,4 +406,38 @@ model AuditLog {
   @@index([userId])
   @@index([action])
   @@map("audit_logs")
+}
+
+// ============================================
+// CASA CHINESA — PROMOS & CHAT
+// ============================================
+
+model PromoBanner {
+  id        String    @id @default(cuid())
+  title     String
+  subtitle  String?
+  imageUrl  String?
+  href      String?
+  sortOrder Int       @default(0)
+  isActive  Boolean   @default(true)
+  validFrom DateTime  @default(now())
+  validTo   DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([isActive, sortOrder])
+  @@map("promo_banners")
+}
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  room      String   // global | support
+  body      String
+  createdAt DateTime @default(now())
+
+  @@index([room, createdAt])
+  @@index([userId])
+  @@map("chat_messages")
 }

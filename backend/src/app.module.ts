@@ -10,7 +10,10 @@ import { AffiliatesModule } from "./modules/affiliates/affiliates.module";
 import { AuditModule } from "./modules/audit/audit.module";
 import { AuthModule } from "./modules/auth/auth.module";
 import { CasinoModule } from "./modules/casino/casino.module";
+import { ChatModule } from "./modules/chat/chat.module";
+import { CrashModule } from "./modules/crash/crash.module";
 import { FinancialModule } from "./modules/financial/financial.module";
+import { PromosModule } from "./modules/promos/promos.module";
 import { SportsModule } from "./modules/sports/sports.module";
 import { UsersModule } from "./modules/users/users.module";
 import { VipModule } from "./modules/vip/vip.module";
@@ -46,6 +49,9 @@ import { RedisModule } from "./database/redis.module";
     SportsModule,
     VipModule,
     AffiliatesModule,
+    PromosModule,
+    CrashModule,
+    ChatModule,
     AdminModule,
     AuditModule,
     MetricsModule,
