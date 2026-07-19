@@ -28,7 +28,9 @@ Cron sugerido (staging): `0 3 * * * /path/to/scripts/backup.sh`
 | Sintoma | Ação |
 |---------|------|
 | Depósito fica PENDING | Verificar `PIX_AUTO_CONFIRM` e webhook `POST /api/webhooks/pix` com `externalId` |
-| Webhook 401 | Conferir `PIX_WEBHOOK_SECRET` vs header `x-webhook-secret` |
+| Webhook 401 | Conferir `PIX_WEBHOOK_SECRET` vs `x-webhook-secret` ou HMAC `x-signature` |
+| Saque PROCESSING | Aguardar webhook `{ kind:"PAYOUT", status:"PAID" }` ou rejeitar no admin |
+| PSP offline | `PIX_PROVIDER_MODE=sandbox` temporário; ou `http` sem `PIX_API_BASE_URL` (http-local) |
 | Webhook 404 | `externalId` não existe — depósito não criado |
 | Duplo crédito | `confirmByExternalId` é idempotente se já COMPLETED |
 
