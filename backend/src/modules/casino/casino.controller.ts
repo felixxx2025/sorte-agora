@@ -12,6 +12,8 @@ import { ApiTags } from "@nestjs/swagger";
 import { CurrentUser } from "../../common/decorators/user.decorator";
 import { Public } from "../../common/decorators/public.decorator";
 import { JwtAuthGuard } from "../../common/guards/auth.guard";
+import { Roles } from "../../common/decorators/roles.decorator";
+import { RolesGuard } from "../../common/guards/roles.guard";
 import { FeatureFlagsService } from "../../common/services/feature-flags.service";
 import { CasinoService } from "./casino.service";
 import { LaunchGameDto } from "./dto/launch-game.dto";
@@ -40,9 +42,12 @@ export class CasinoController {
 
   @Public()
   @Get("games")
-  getGames(@Query("category") category?: string) {
+  getGames(
+    @Query("category") category?: string,
+    @Query("provider") provider?: string,
+  ) {
     this.assertEnabled();
-    return this.casinoService.getGames(category);
+    return this.casinoService.getGames(category, provider);
   }
 
   @Public()
@@ -69,6 +74,20 @@ export class CasinoController {
       ...launchGameDto,
       userId: user.id,
     } as any);
+  }
+
+  @Post("games/:id/demo")
+  launchDemo(@Param("id") id: string, @CurrentUser() user: any) {
+    this.assertEnabled();
+    return this.casinoService.launchDemo(id, user.id);
+  }
+
+  @Post("pgsoft/sync")
+  @UseGuards(RolesGuard)
+  @Roles("ADMIN")
+  syncPgSoft() {
+    this.assertEnabled();
+    return this.casinoService.syncPgSoftCatalog();
   }
 
   @Get("sessions")

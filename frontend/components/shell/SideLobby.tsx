@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 
 const SIDE_ITEMS = [
   { href: '/home', label: 'Início', icon: '🏠' },
+  { href: '/casino?provider=PGSOFT', label: 'PG Soft', icon: '🐯' },
   { href: '/casino', label: 'Cassino', icon: '🎰' },
   { href: '/casino/live', label: 'Ao Vivo', icon: '🔴' },
   { href: '/crash', label: 'Crash', icon: '📈' },

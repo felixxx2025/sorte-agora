@@ -26,8 +26,8 @@ export class TransformInterceptor<T> implements NestInterceptor<
     const request = context.switchToHttp().getRequest();
     const path = request.url || "";
 
-    // Prometheus e health raw: não envelopar
-    if (path.includes("/metrics")) {
+    // Prometheus, health raw e wallet PG Soft: não envelopar
+    if (path.includes("/metrics") || path.includes("/pgsoft")) {
       return next.handle();
     }
 

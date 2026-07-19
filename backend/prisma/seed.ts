@@ -141,6 +141,52 @@ async function main() {
     });
   }
 
+  const pgsoftGames = [
+    { providerGameId: '126', name: 'Fortune Tiger', slug: 'pgsoft-fortune-tiger', rtp: 96.81 },
+    { providerGameId: '98', name: 'Fortune Ox', slug: 'pgsoft-fortune-ox', rtp: 96.75 },
+    { providerGameId: '68', name: 'Fortune Mouse', slug: 'pgsoft-fortune-mouse', rtp: 96.95 },
+    { providerGameId: '1543462', name: 'Fortune Rabbit', slug: 'pgsoft-fortune-rabbit', rtp: 96.75 },
+    { providerGameId: '1695365', name: 'Fortune Dragon', slug: 'pgsoft-fortune-dragon', rtp: 96.95 },
+    { providerGameId: '65', name: 'Mahjong Ways', slug: 'pgsoft-mahjong-ways', rtp: 96.92 },
+    { providerGameId: '74', name: 'Mahjong Ways 2', slug: 'pgsoft-mahjong-ways-2', rtp: 96.95 },
+    { providerGameId: '48', name: 'Double Fortune', slug: 'pgsoft-double-fortune', rtp: 96.97 },
+    { providerGameId: '79', name: 'Dreams of Macau', slug: 'pgsoft-dreams-of-macau', rtp: 96.95 },
+    { providerGameId: '87', name: 'Treasures of Aztec', slug: 'pgsoft-treasures-aztec', rtp: 96.7 },
+  ];
+
+  for (const g of pgsoftGames) {
+    await prisma.casinoGame.upsert({
+      where: {
+        provider_providerGameId: {
+          provider: 'PGSOFT',
+          providerGameId: g.providerGameId,
+        },
+      },
+      update: {
+        name: g.name,
+        category: 'slots',
+        slug: g.slug,
+        rtp: g.rtp,
+        isActive: true,
+        demoAvailable: true,
+      },
+      create: {
+        provider: 'PGSOFT',
+        providerGameId: g.providerGameId,
+        name: g.name,
+        category: 'slots',
+        slug: g.slug,
+        thumbnail: `/games/pgsoft/${g.slug.replace('pgsoft-', '')}.png`,
+        rtp: g.rtp,
+        minBet: 0.2,
+        maxBet: 1000,
+        isActive: true,
+        demoAvailable: true,
+        isNew: true,
+      },
+    });
+  }
+
   const liveCasino = await prisma.casinoGame.findFirst({
     where: { category: "live" },
   });

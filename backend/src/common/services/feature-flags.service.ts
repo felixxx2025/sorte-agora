@@ -56,6 +56,10 @@ export class FeatureFlagsService {
       pixAutoConfirm: this.config.get("PIX_AUTO_CONFIRM") === "true",
       pixProviderMode: this.config.get("PIX_PROVIDER_MODE") || "sandbox",
       casinoMode: this.config.get("CASINO_PROVIDER_MODE") || "demo",
+      pgsoftConfigured: Boolean(
+        (this.config.get("PGSOFT_API_BASE_URL") || "").trim() &&
+          (this.config.get("PGSOFT_OPERATOR_TOKEN") || "").trim(),
+      ),
       sportsOddsMode: this.config.get("SPORTS_ODDS_MODE") || "static",
     };
   }

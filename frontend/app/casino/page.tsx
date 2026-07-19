@@ -16,26 +16,46 @@ const CATEGORIES = [
   { key: 'jackpot', label: '💎 Jackpot' },
 ];
 
+const PROVIDERS = [
+  { key: 'all', label: 'Todos provedores' },
+  { key: 'PGSOFT', label: 'PG Soft' },
+  { key: 'DEMO', label: 'Demo' },
+];
+
 function CasinoContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const initialCat = searchParams.get('category') ?? 'all';
+  const initialProvider = searchParams.get('provider') ?? 'all';
   const [selectedCategory, setSelectedCategory] = useState(initialCat);
+  const [selectedProvider, setSelectedProvider] = useState(initialProvider);
+
   useEffect(() => {
-    const cat = searchParams.get('category') ?? 'all';
-    setSelectedCategory(cat);
+    setSelectedCategory(searchParams.get('category') ?? 'all');
+    setSelectedProvider(searchParams.get('provider') ?? 'all');
   }, [searchParams]);
 
   const { data: games, isLoading } = useCasinoGames(
     selectedCategory === 'all' ? undefined : selectedCategory,
+    selectedProvider === 'all' ? undefined : selectedProvider,
   );
+
+  const pushFilters = (cat: string, provider: string) => {
+    const params = new URLSearchParams();
+    if (cat !== 'all') params.set('category', cat);
+    if (provider !== 'all') params.set('provider', provider);
+    const qs = params.toString();
+    router.replace(qs ? `/casino?${qs}` : '/casino');
+  };
 
   const selectCategory = (cat: string) => {
     setSelectedCategory(cat);
-    const params = new URLSearchParams(searchParams.toString());
-    if (cat === 'all') params.delete('category');
-    else params.set('category', cat);
-    router.replace(`/casino?${params.toString()}`);
+    pushFilters(cat, selectedProvider);
+  };
+
+  const selectProvider = (provider: string) => {
+    setSelectedProvider(provider);
+    pushFilters(selectedCategory, provider);
   };
 
   return (
@@ -45,7 +65,23 @@ function CasinoContent() {
           <h1 className="font-display text-2xl font-extrabold text-sa-gold">Cassino</h1>
         </div>
 
-        {/* Category chips */}
+        <div className="flex flex-wrap gap-2">
+          {PROVIDERS.map((p) => (
+            <button
+              key={p.key}
+              type="button"
+              onClick={() => selectProvider(p.key)}
+              className={
+                selectedProvider === p.key
+                  ? 'sa-chip bg-sa-gold/20 text-sa-gold border-sa-gold/50'
+                  : 'sa-chip opacity-60 hover:opacity-100 transition'
+              }
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
+
         <div className="flex flex-wrap gap-2">
           {CATEGORIES.map((c) => (
             <button
@@ -75,10 +111,22 @@ function CasinoContent() {
               <GameTile
                 key={game.id}
                 name={game.name}
-                category={game.category}
+                category={
+                  game.provider === 'PGSOFT'
+                    ? `PG Soft · ${game.category}`
+                    : game.category
+                }
                 thumbnail={game.thumbnailUrl ?? game.thumbnail}
                 href={`/casino/${game.id}`}
-                badge={game.isNew ? 'NOVO' : game.isHot ? 'HOT' : undefined}
+                badge={
+                  game.provider === 'PGSOFT'
+                    ? 'PG'
+                    : game.isNew
+                      ? 'NOVO'
+                      : game.isHot
+                        ? 'HOT'
+                        : undefined
+                }
               />
             ))}
           </div>

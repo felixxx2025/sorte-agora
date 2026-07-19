@@ -1,10 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { casinoApi, type LaunchGameInput } from '@/lib/api';
 
-export function useCasinoGames(category?: string) {
+export function useCasinoGames(category?: string, provider?: string) {
   return useQuery({
-    queryKey: ['casino', 'games', category],
-    queryFn: () => casinoApi.getGames(category),
+    queryKey: ['casino', 'games', category, provider],
+    queryFn: () => casinoApi.getGames(category, provider),
   });
 }
 

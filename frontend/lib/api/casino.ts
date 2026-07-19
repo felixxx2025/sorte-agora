@@ -52,8 +52,10 @@ export interface LaunchGameResponse {
 
 // API functions
 export const casinoApi = {
-  async getGames(category?: string): Promise<CasinoGame[]> {
-    const params = category ? { category } : {};
+  async getGames(category?: string, provider?: string): Promise<CasinoGame[]> {
+    const params: Record<string, string> = {};
+    if (category) params.category = category;
+    if (provider) params.provider = provider;
     const response = await apiClient.get('/casino/games', { params });
     return response.data;
   },
