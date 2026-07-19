@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { CacheService } from '../../common/services/cache.service';
 import { PrismaService } from '../../database/prisma.service';
+import { AffiliatesService } from '../affiliates/affiliates.service';
 import { VipService } from '../vip/vip.service';
 import { PlaceBetDto } from './dto/place-bet.dto';
 
@@ -14,6 +15,7 @@ export class SportsService {
     private prisma: PrismaService,
     private vipService: VipService,
     private cache: CacheService,
+    private affiliatesService: AffiliatesService,
   ) { }
 
   async getEvents(isLive: boolean = false) {
@@ -164,8 +166,8 @@ export class SportsService {
 
     const payout = Number(bet.stake) * Number(bet.odds);
 
-    return this.prisma.$transaction(async (tx) => {
-      const updated = await tx.sportsBet.update({
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const settled = await tx.sportsBet.update({
         where: { id: betId },
         data: {
           status: 'WON',
@@ -196,7 +198,33 @@ export class SportsService {
         });
       }
 
-      return updated;
+      return settled;
     });
+
+    await this.maybeRecordReferralCommission(bet.userId, payout, 'BET');
+    return updated;
+  }
+
+  private async maybeRecordReferralCommission(
+    userId: string,
+    amount: number,
+    source: string,
+  ) {
+    try {
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { referredById: true },
+      });
+      if (!user?.referredById) return;
+
+      await this.affiliatesService.recordCommission({
+        affiliateUserId: user.referredById,
+        referredUserId: userId,
+        amount,
+        source,
+      });
+    } catch {
+      // Comissão não deve quebrar o settlement
+    }
   }
 }

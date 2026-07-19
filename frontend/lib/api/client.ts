@@ -40,6 +40,14 @@ apiClient.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
+    if (error.response?.status === 429) {
+      const msg =
+        error.response?.data?.message ||
+        'Muitas tentativas. Aguarde e tente novamente.';
+      error.message = Array.isArray(msg) ? msg.join(', ') : String(msg);
+      return Promise.reject(error);
+    }
+
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
 

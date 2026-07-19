@@ -35,8 +35,8 @@ function WalletContent() {
         setMessage('Depósito solicitado. Aguardando confirmação PIX.');
       }
       setDepositAmount('');
-    } catch {
-      setError('Erro ao solicitar depósito');
+    } catch (err: any) {
+      setError(err?.message || 'Erro ao solicitar depósito');
     }
   };
 
@@ -49,8 +49,8 @@ function WalletContent() {
       setMessage('Saque solicitado com sucesso! Aguardando aprovação.');
       setWithdrawAmount('');
       setPixKey('');
-    } catch {
-      setError('Erro ao solicitar saque. Verifique o saldo e tente novamente.');
+    } catch (err: any) {
+      setError(err?.message || 'Erro ao solicitar saque. Verifique o saldo e tente novamente.');
     }
   };
 

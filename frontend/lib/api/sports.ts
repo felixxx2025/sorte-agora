@@ -5,7 +5,6 @@ import { z } from 'zod';
 export const PlaceBetSchema = z.object({
   selectionId: z.string(),
   stake: z.number().min(1),
-  userId: z.string(),
 });
 
 // Types

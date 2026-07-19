@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../database/prisma.service';
+import { AffiliatesService } from '../affiliates/affiliates.service';
 import { FinancialService } from './financial.service';
 
 describe('FinancialService', () => {
@@ -12,6 +13,9 @@ describe('FinancialService', () => {
       findUnique: jest.fn(),
       update: jest.fn(),
       create: jest.fn(),
+    },
+    user: {
+      findUnique: jest.fn(),
     },
     transaction: {
       create: jest.fn(),
@@ -30,6 +34,10 @@ describe('FinancialService', () => {
     }),
   };
 
+  const mockAffiliatesService = {
+    recordCommission: jest.fn().mockResolvedValue(null),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -42,11 +50,16 @@ describe('FinancialService', () => {
           provide: ConfigService,
           useValue: mockConfigService,
         },
+        {
+          provide: AffiliatesService,
+          useValue: mockAffiliatesService,
+        },
       ],
     }).compile();
 
     service = module.get<FinancialService>(FinancialService);
     jest.clearAllMocks();
+    mockPrismaService.user.findUnique.mockResolvedValue({ referredById: null });
   });
 
   it('should be defined', () => {
@@ -111,6 +124,37 @@ describe('FinancialService', () => {
       expect(result.status).toBe('COMPLETED');
       expect(result.autoConfirmed).toBe(true);
       expect(mockPrismaService.$transaction).toHaveBeenCalled();
+    });
+
+    it('should record affiliate commission when user was referred', async () => {
+      const mockAccount = {
+        id: '1',
+        userId: 'user1',
+        balance: 1000,
+        currency: 'BRL',
+      };
+
+      mockPrismaService.account.findUnique.mockResolvedValue(mockAccount);
+      mockPrismaService.user.findUnique.mockResolvedValue({ referredById: 'aff-user' });
+      mockPrismaService.$transaction.mockImplementation(async (cb) =>
+        cb({
+          transaction: {
+            create: jest.fn().mockResolvedValue({ id: 'tx1' }),
+          },
+          account: {
+            update: jest.fn().mockResolvedValue({ ...mockAccount, balance: 1100 }),
+          },
+        }),
+      );
+
+      await service.createDeposit('user1', { amount: 100 });
+
+      expect(mockAffiliatesService.recordCommission).toHaveBeenCalledWith({
+        affiliateUserId: 'aff-user',
+        referredUserId: 'user1',
+        amount: 100,
+        source: 'DEPOSIT',
+      });
     });
   });
 

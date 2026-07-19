@@ -2,7 +2,6 @@ import { Body, Controller, Delete, Get, Param, Post, Put, Request, UseGuards } f
 import { Roles } from '../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../common/guards/auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
-import { SportsService } from '../sports/sports.service';
 import { AdminService } from './admin.service';
 import { BanUserDto } from './dto/ban-user.dto';
 import { UpdateBonusDto } from './dto/update-bonus.dto';
@@ -11,10 +10,7 @@ import { UpdateBonusDto } from './dto/update-bonus.dto';
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('ADMIN')
 export class AdminController {
-  constructor(
-    private adminService: AdminService,
-    private sportsService: SportsService,
-  ) { }
+  constructor(private adminService: AdminService) { }
 
   @Get('dashboard')
   getDashboard() {
@@ -75,12 +71,22 @@ export class AdminController {
     return this.adminService.reviewKyc(id, body.decision, req.user.id, body.reason);
   }
 
+  @Get('sports/bets/pending')
+  listPendingSportsBets() {
+    return this.adminService.listPendingSportsBets();
+  }
+
   @Put('sports/bets/:id/settle')
   settleBet(
     @Param('id') id: string,
     @Body() body: { result: 'WON' | 'LOST' },
   ) {
-    return this.sportsService.settleBet(id, body.result);
+    return this.adminService.settleSportsBet(id, body.result);
+  }
+
+  @Get('bonuses')
+  listBonuses() {
+    return this.adminService.listBonuses();
   }
 
   @Post('bonuses')

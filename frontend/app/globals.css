@@ -33,6 +33,10 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-family: var(--font-inter), system-ui, sans-serif;
+  }
+  h1, h2, h3, .sa-display {
+    font-family: var(--font-montserrat), var(--font-inter), system-ui, sans-serif;
   }
 }
 

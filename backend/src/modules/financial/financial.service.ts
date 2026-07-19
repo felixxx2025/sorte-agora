@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../database/prisma.service';
+import { AffiliatesService } from '../affiliates/affiliates.service';
 import { DepositDto } from './dto/deposit.dto';
 import { WithdrawDto } from './dto/withdraw.dto';
 
@@ -13,6 +14,7 @@ export class FinancialService {
   constructor(
     private prisma: PrismaService,
     private configService: ConfigService,
+    private affiliatesService: AffiliatesService,
   ) { }
 
   async getBalance(userId: string) {
@@ -76,6 +78,12 @@ export class FinancialService {
 
         return { transaction, updatedAccount };
       });
+
+      await this.maybeRecordReferralCommission(
+        userId,
+        Number(depositDto.amount),
+        'DEPOSIT',
+      );
 
       return {
         transactionId: result.transaction.id,
@@ -159,6 +167,12 @@ export class FinancialService {
       return { updatedTx, updatedAccount };
     });
 
+    await this.maybeRecordReferralCommission(
+      userId,
+      Number(transaction.amount),
+      'DEPOSIT',
+    );
+
     return {
       transactionId: result.updatedTx.id,
       status: 'COMPLETED',
@@ -221,6 +235,29 @@ export class FinancialService {
       orderBy: { createdAt: 'desc' },
       take: 50,
     });
+  }
+
+  private async maybeRecordReferralCommission(
+    userId: string,
+    amount: number,
+    source: string,
+  ) {
+    try {
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { referredById: true },
+      });
+      if (!user?.referredById) return;
+
+      await this.affiliatesService.recordCommission({
+        affiliateUserId: user.referredById,
+        referredUserId: userId,
+        amount,
+        source,
+      });
+    } catch {
+      // Comissão não deve quebrar o crédito do depósito
+    }
   }
 
   private shouldAutoConfirmPix(): boolean {

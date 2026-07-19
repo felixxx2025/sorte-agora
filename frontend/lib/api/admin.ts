@@ -110,6 +110,21 @@ export const adminApi = {
     return response.data;
   },
 
+  async getPendingSportsBets(): Promise<any[]> {
+    const response = await apiClient.get('/admin/sports/bets/pending');
+    return response.data;
+  },
+
+  async settleSportsBet(id: string, result: 'WON' | 'LOST'): Promise<any> {
+    const response = await apiClient.put(`/admin/sports/bets/${id}/settle`, { result });
+    return response.data;
+  },
+
+  async getBonuses(): Promise<Bonus[]> {
+    const response = await apiClient.get('/admin/bonuses');
+    return response.data;
+  },
+
   async createBonus(data: Partial<Bonus>): Promise<Bonus> {
     const response = await apiClient.post('/admin/bonuses', data);
     return response.data;

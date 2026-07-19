@@ -4,13 +4,19 @@
 
 | Campo | Valor |
 |-------|-------|
-| **Versão** | 1.0.0-fase3 |
-| **Fase atual** | **Fase 3 — Fechamento concluído** |
-| **Maturidade** | ~75/100 (demo/staging; ver `GO_LIVE.md`) |
+| **Versão** | 1.1.0-faseA |
+| **Fase atual** | **Fase A — Integração & Correção concluída** |
+| **Maturidade** | ~78/100 (ver `GO_LIVE.md`) |
 | **Domínio** | Apostas (cassino + esportes) — **não** rifas |
 | **Última atualização** | 19 de julho de 2026 |
 
 > Documentos antigos que afirmam “92/100 pronto para produção” estão **desatualizados**. A fonte de verdade é [`STATUS.md`](./STATUS.md).
+
+## O que a Fase A entregou
+
+- Comissões afiliado no depósito/settle WON; sports via hooks; admin settle + bônus
+- KYC upload, casino play com saldo, Montserrat, fail-fast secrets, HTTP 429
+- Testes: **86** unit + E2E **7/7** — `docs/test-results/fase-A.md`
 
 ## O que a Fase 3 entregou
 

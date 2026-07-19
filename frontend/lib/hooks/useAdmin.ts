@@ -83,6 +83,33 @@ export function useAdminReports() {
   });
 }
 
+export function usePendingSportsBets() {
+  return useQuery({
+    queryKey: ['admin', 'sports', 'pending'],
+    queryFn: () => adminApi.getPendingSportsBets(),
+  });
+}
+
+export function useSettleSportsBet() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, result }: { id: string; result: 'WON' | 'LOST' }) =>
+      adminApi.settleSportsBet(id, result),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'sports', 'pending'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'dashboard'] });
+    },
+  });
+}
+
+export function useAdminBonuses() {
+  return useQuery({
+    queryKey: ['admin', 'bonuses'],
+    queryFn: () => adminApi.getBonuses(),
+  });
+}
+
 export function useCreateBonus() {
   const queryClient = useQueryClient();
 

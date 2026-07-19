@@ -1,8 +1,8 @@
 # STATUS — SORTE AGORA
 
-**Atualizado:** 19 de julho de 2026 (Fase 3 concluída)  
-**Maturidade geral estimada:** ~75/100  
-**Estado:** demo/staging ready — checklist em `GO_LIVE.md`
+**Atualizado:** 19 de julho de 2026 (Fase A — integração/correção)  
+**Maturidade geral estimada:** ~78/100  
+**Estado:** demo/staging + fluxos FE↔BE coerentes — checklist em `GO_LIVE.md`
 
 ## Fases
 
@@ -11,21 +11,24 @@
 | 1 — Estabilização | ✅ |
 | 2 — Implementação completa | ✅ |
 | 3 — Fechamento (testes, review, harden, docs) | ✅ |
+| **A — Integração & Correção** | ✅ |
+| B — Implementação (PIX/provider/LGPD) | ⏳ próxima |
+| C — Testes & go-live staging | ⏳ |
 
-## Score por módulo (pós F3)
+## Score por módulo (pós Fase A)
 
 | Módulo | Score | Notas |
 |--------|------:|-------|
 | Auth / MFA / reset | 85 | MailService + blacklist |
-| KYC | 70 | Demo storage |
-| Financeiro | 75 | PIX auto-confirm sandbox |
-| Cassino | 75 | Demo + cache Redis |
-| Sports + settlement | 80 | userId via JWT |
+| KYC | 75 | Upload real (ainda sem S3) |
+| Financeiro | 78 | PIX sandbox + comissão afiliado |
+| Cassino | 72 | Play com saldo/sessão demo |
+| Sports + settlement | 85 | Hooks FE + admin settle UI |
 | VIP | 80 | Missões + progresso |
-| Afiliados | 75 | Comissões |
-| Admin UI | 80 | Reports reais |
-| Infra / backup | 70 | Scripts alinhados + healthchecks |
-| Testes | 80 | 80 unit + smoke OK + E2E 5/5 |
+| Afiliados | 78 | Comissões no depósito/settle WON |
+| Admin UI | 88 | Apostas + bônus |
+| Infra / backup | 72 | Fail-fast secrets prod |
+| Testes | 82 | 86 unit + smoke + E2E 7/7 |
 | Docs | 85 | STATUS / GO_LIVE / CHANGELOG |
 
 ## Contas seed

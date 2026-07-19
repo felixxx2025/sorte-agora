@@ -9,6 +9,23 @@ import { TransformInterceptor } from './common/interceptors/transform.intercepto
 import './tracing';
 
 async function bootstrap() {
+  if (process.env.NODE_ENV === 'production') {
+    const jwt = process.env.JWT_SECRET || '';
+    const enc = process.env.ENCRYPTION_KEY || '';
+    const weak =
+      !jwt ||
+      jwt.length < 32 ||
+      /change.?me|secret|default|your.?jwt/i.test(jwt) ||
+      !enc ||
+      enc.length < 32 ||
+      /change.?me|secret|default|your.?encryption/i.test(enc);
+    if (weak) {
+      throw new Error(
+        'Refusing to start: set strong JWT_SECRET and ENCRYPTION_KEY in production',
+      );
+    }
+  }
+
   const app = await NestFactory.create(AppModule);
 
   // Global prefix

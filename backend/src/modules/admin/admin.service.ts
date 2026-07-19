@@ -1,11 +1,15 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
+import { SportsService } from '../sports/sports.service';
 import { BanUserDto } from './dto/ban-user.dto';
 import { UpdateBonusDto } from './dto/update-bonus.dto';
 
 @Injectable()
 export class AdminService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private sportsService: SportsService,
+  ) {}
 
   async getDashboard() {
     const totalUsers = await this.prisma.user.count();
@@ -213,9 +217,28 @@ export class AdminService {
     return { message: `KYC ${decision.toLowerCase()}` };
   }
 
+  async listPendingSportsBets() {
+    return this.prisma.sportsBet.findMany({
+      where: { status: 'PENDING' },
+      include: {
+        user: { select: { id: true, email: true } },
+        event: { select: { id: true, name: true } },
+        selection: { select: { id: true, name: true, odds: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 100,
+    });
+  }
+
   async settleSportsBet(betId: string, result: 'WON' | 'LOST') {
-    // Delegated via SportsService in controller — kept for compatibility if needed
-    return { betId, result };
+    return this.sportsService.settleBet(betId, result);
+  }
+
+  async listBonuses() {
+    return this.prisma.bonus.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 100,
+    });
   }
 
   async createBonus(createBonusDto: any) {

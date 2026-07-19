@@ -38,12 +38,20 @@ function ProfileContent() {
   const [kycForm, setKycForm] = useState({
     documentType: 'CPF',
     documentNumber: '',
-    documentFront: 'data:image/png;base64,demo',
-    selfie: 'data:image/png;base64,demo',
+    documentFront: '',
+    selfie: '',
   });
   const [kycStatus, setKycStatus] = useState<any>(null);
 
   const currentUser = profile || user;
+
+  const readFileAsDataUrl = (file: File) =>
+    new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ''));
+      reader.onerror = () => reject(new Error('Falha ao ler arquivo'));
+      reader.readAsDataURL(file);
+    });
 
   useEffect(() => {
     if (currentUser && !isEditing) {
@@ -69,8 +77,8 @@ function ProfileContent() {
       setUser(updated);
       setIsEditing(false);
       setMessage('Perfil atualizado com sucesso!');
-    } catch {
-      setError('Erro ao atualizar perfil');
+    } catch (err: any) {
+      setError(err?.message || 'Erro ao atualizar perfil');
     }
   };
 
@@ -78,8 +86,8 @@ function ProfileContent() {
     try {
       const data = await generateMfa.mutateAsync();
       setMfaSecret(data);
-    } catch {
-      setError('Erro ao gerar MFA');
+    } catch (err: any) {
+      setError(err?.message || 'Erro ao gerar MFA');
     }
   };
 
@@ -90,8 +98,8 @@ function ProfileContent() {
       setMfaSecret(null);
       setMfaToken('');
       refetch();
-    } catch {
-      setError('Token MFA inválido');
+    } catch (err: any) {
+      setError(err?.message || 'Token MFA inválido');
     }
   };
 
@@ -101,20 +109,26 @@ function ProfileContent() {
       setMessage('MFA desativado');
       setMfaToken('');
       refetch();
-    } catch {
-      setError('Não foi possível desativar MFA');
+    } catch (err: any) {
+      setError(err?.message || 'Não foi possível desativar MFA');
     }
   };
 
   const handleKyc = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
+    setMessage('');
+    if (!kycForm.documentFront || !kycForm.selfie) {
+      setError('Envie foto do documento e selfie');
+      return;
+    }
     try {
       await usersApi.submitKyc(kycForm as any);
       setMessage('KYC enviado para análise');
       const status = await usersApi.getKycStatus();
       setKycStatus(status);
-    } catch {
-      setError('Erro ao enviar KYC (já pode haver um pendente)');
+    } catch (err: any) {
+      setError(err?.message || 'Erro ao enviar KYC (já pode haver um pendente)');
     }
   };
 
@@ -270,8 +284,44 @@ function ProfileContent() {
                   required
                   className="bg-[#0F0F1A] border-white/10 text-white"
                 />
+                <label className="text-sm text-gray-400 space-y-1">
+                  <span>Documento (frente)</span>
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    required
+                    className="bg-[#0F0F1A] border-white/10 text-white"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      const dataUrl = await readFileAsDataUrl(file);
+                      setKycForm((prev) => ({ ...prev, documentFront: dataUrl }));
+                    }}
+                  />
+                  {kycForm.documentFront && (
+                    <span className="text-xs text-green-400">Documento carregado</span>
+                  )}
+                </label>
+                <label className="text-sm text-gray-400 space-y-1">
+                  <span>Selfie</span>
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    required
+                    className="bg-[#0F0F1A] border-white/10 text-white"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      const dataUrl = await readFileAsDataUrl(file);
+                      setKycForm((prev) => ({ ...prev, selfie: dataUrl }));
+                    }}
+                  />
+                  {kycForm.selfie && (
+                    <span className="text-xs text-green-400">Selfie carregada</span>
+                  )}
+                </label>
                 <Button type="submit" className="md:col-span-2 bg-[#FFD700] text-[#1A1A2E]">
-                  Enviar KYC (demo)
+                  Enviar KYC
                 </Button>
               </form>
             )}

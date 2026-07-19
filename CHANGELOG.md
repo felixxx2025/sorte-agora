@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.1.0-faseA] — 2026-07-19
+
+### Added
+- Comissões de afiliado disparadas em depósito confirmado e settle WON
+- Admin: listagem/settle de apostas pendentes + CRUD bônus na UI
+- E2E sports + wallet; specs de `AffiliatesService`
+- Tipografia Montserrat + Inter; KYC com upload de arquivos
+- Fail-fast se `JWT_SECRET`/`ENCRYPTION_KEY` fracos em production
+
+### Fixed
+- Sports page migrada para hooks TanStack (`useSports*`)
+- `AdminService.settleSportsBet` delega a `SportsService` (sem stub)
+- Client Axios trata HTTP 429
+- Casino `/play` exibe saldo e sessão
+
+### Status
+Maturidade ~78/100 — integração FE↔BE coerente; PIX/provider live ainda Fase B.
+
 ## [1.0.0-fase3] — 2026-07-19
 
 ### Added
