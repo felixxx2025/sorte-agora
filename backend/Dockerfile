@@ -20,6 +20,9 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/package*.json ./
 COPY --from=builder /app/prisma ./prisma
+# Catálogo PG Soft (também em dist via nest assets; cópia explícita p/ seed)
+COPY --from=builder /app/src/modules/casino/data ./dist/src/modules/casino/data
+COPY --from=builder /app/prisma/data ./prisma/data
 
 RUN groupadd -r nodejs
 RUN useradd -r -u 1001 -g nodejs nodejs

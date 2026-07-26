@@ -1,7 +1,38 @@
 import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+import * as fs from 'fs';
+import * as path from 'path';
 
 const prisma = new PrismaClient();
+
+function loadPgSoftCatalog() {
+  const candidates = [
+    path.join(__dirname, 'data/pgsoft-games.json'),
+    path.join(__dirname, '../src/modules/casino/data/pgsoft-games.json'),
+    path.join(
+      __dirname,
+      '../dist/src/modules/casino/data/pgsoft-games.json',
+    ),
+  ];
+  for (const file of candidates) {
+    if (fs.existsSync(file)) {
+      return JSON.parse(fs.readFileSync(file, 'utf8')) as Array<{
+        providerGameId: string;
+        name: string;
+        slug: string;
+        category?: string;
+        rtp: number | null;
+        thumbnail: string;
+        description?: string | null;
+        isNew?: boolean;
+        maxWin?: string | null;
+        catalogGid?: string;
+        code?: string;
+      }>;
+    }
+  }
+  throw new Error('Catálogo PG Soft (pgsoft-games.json) não encontrado');
+}
 
 async function main() {
   console.log('Seeding SORTE AGORA database...');
@@ -141,18 +172,8 @@ async function main() {
     });
   }
 
-  const pgsoftGames = [
-    { providerGameId: '126', name: 'Fortune Tiger', slug: 'pgsoft-fortune-tiger', rtp: 96.81 },
-    { providerGameId: '98', name: 'Fortune Ox', slug: 'pgsoft-fortune-ox', rtp: 96.75 },
-    { providerGameId: '68', name: 'Fortune Mouse', slug: 'pgsoft-fortune-mouse', rtp: 96.95 },
-    { providerGameId: '1543462', name: 'Fortune Rabbit', slug: 'pgsoft-fortune-rabbit', rtp: 96.75 },
-    { providerGameId: '1695365', name: 'Fortune Dragon', slug: 'pgsoft-fortune-dragon', rtp: 96.95 },
-    { providerGameId: '65', name: 'Mahjong Ways', slug: 'pgsoft-mahjong-ways', rtp: 96.92 },
-    { providerGameId: '74', name: 'Mahjong Ways 2', slug: 'pgsoft-mahjong-ways-2', rtp: 96.95 },
-    { providerGameId: '48', name: 'Double Fortune', slug: 'pgsoft-double-fortune', rtp: 96.97 },
-    { providerGameId: '79', name: 'Dreams of Macau', slug: 'pgsoft-dreams-of-macau', rtp: 96.95 },
-    { providerGameId: '87', name: 'Treasures of Aztec', slug: 'pgsoft-treasures-aztec', rtp: 96.7 },
-  ];
+  const pgsoftGames = loadPgSoftCatalog();
+  console.log(`Seeding ${pgsoftGames.length} jogos PG Soft...`);
 
   for (const g of pgsoftGames) {
     await prisma.casinoGame.upsert({
@@ -164,9 +185,17 @@ async function main() {
       },
       update: {
         name: g.name,
-        category: 'slots',
+        category: g.category || 'slots',
         slug: g.slug,
         rtp: g.rtp,
+        thumbnail: g.thumbnail,
+        description: g.description ?? null,
+        isNew: Boolean(g.isNew),
+        features: {
+          maxWin: g.maxWin ?? null,
+          catalogGid: g.catalogGid ?? null,
+          code: g.code ?? null,
+        },
         isActive: true,
         demoAvailable: true,
       },
@@ -174,15 +203,21 @@ async function main() {
         provider: 'PGSOFT',
         providerGameId: g.providerGameId,
         name: g.name,
-        category: 'slots',
+        category: g.category || 'slots',
         slug: g.slug,
-        thumbnail: `/games/pgsoft/${g.slug.replace('pgsoft-', '')}.png`,
+        thumbnail: g.thumbnail,
+        description: g.description ?? null,
         rtp: g.rtp,
+        features: {
+          maxWin: g.maxWin ?? null,
+          catalogGid: g.catalogGid ?? null,
+          code: g.code ?? null,
+        },
         minBet: 0.2,
         maxBet: 1000,
         isActive: true,
         demoAvailable: true,
-        isNew: true,
+        isNew: Boolean(g.isNew),
       },
     });
   }

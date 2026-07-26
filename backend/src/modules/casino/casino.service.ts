@@ -7,6 +7,8 @@ import {
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import * as crypto from "crypto";
+import * as fs from "fs";
+import * as path from "path";
 import { CacheService } from "../../common/services/cache.service";
 import { PrismaService } from "../../database/prisma.service";
 import { LaunchGameDto } from "./dto/launch-game.dto";
@@ -18,19 +20,40 @@ import { DemoCasinoProvider } from "./providers/demo-casino.provider";
 import { LiveCasinoProvider } from "./providers/live-casino.provider";
 import { PgSoftCasinoProvider } from "./providers/pgsoft-casino.provider";
 
-/** Catálogo público PG Soft (IDs oficiais) — sem assets proprietários. */
-export const PGSOFT_CATALOG = [
-  { providerGameId: "126", name: "Fortune Tiger", category: "slots", slug: "pgsoft-fortune-tiger", rtp: 96.81, thumbnail: "/games/pgsoft/fortune-tiger.png" },
-  { providerGameId: "98", name: "Fortune Ox", category: "slots", slug: "pgsoft-fortune-ox", rtp: 96.75, thumbnail: "/games/pgsoft/fortune-ox.png" },
-  { providerGameId: "68", name: "Fortune Mouse", category: "slots", slug: "pgsoft-fortune-mouse", rtp: 96.95, thumbnail: "/games/pgsoft/fortune-mouse.png" },
-  { providerGameId: "1543462", name: "Fortune Rabbit", category: "slots", slug: "pgsoft-fortune-rabbit", rtp: 96.75, thumbnail: "/games/pgsoft/fortune-rabbit.png" },
-  { providerGameId: "1695365", name: "Fortune Dragon", category: "slots", slug: "pgsoft-fortune-dragon", rtp: 96.95, thumbnail: "/games/pgsoft/fortune-dragon.png" },
-  { providerGameId: "65", name: "Mahjong Ways", category: "slots", slug: "pgsoft-mahjong-ways", rtp: 96.92, thumbnail: "/games/pgsoft/mahjong-ways.png" },
-  { providerGameId: "74", name: "Mahjong Ways 2", category: "slots", slug: "pgsoft-mahjong-ways-2", rtp: 96.95, thumbnail: "/games/pgsoft/mahjong-ways-2.png" },
-  { providerGameId: "48", name: "Double Fortune", category: "slots", slug: "pgsoft-double-fortune", rtp: 96.97, thumbnail: "/games/pgsoft/double-fortune.png" },
-  { providerGameId: "79", name: "Dreams of Macau", category: "slots", slug: "pgsoft-dreams-of-macau", rtp: 96.95, thumbnail: "/games/pgsoft/dreams-macau.png" },
-  { providerGameId: "87", name: "Treasures of Aztec", category: "slots", slug: "pgsoft-treasures-aztec", rtp: 96.7, thumbnail: "/games/pgsoft/treasures-aztec.png" },
-] as const;
+export type PgSoftCatalogEntry = {
+  providerGameId: string;
+  name: string;
+  slug: string;
+  category: string;
+  rtp: number | null;
+  thumbnail: string;
+  description?: string | null;
+  isNew?: boolean;
+  maxWin?: string | null;
+  catalogGid?: string;
+  code?: string;
+};
+
+/** Catálogo completo PG Soft (pgid = launch ID). Fonte: data/pgsoft-games.json */
+export function loadPgSoftCatalog(): PgSoftCatalogEntry[] {
+  const candidates = [
+    path.join(__dirname, "data", "pgsoft-games.json"),
+    path.join(
+      process.cwd(),
+      "src/modules/casino/data/pgsoft-games.json",
+    ),
+    path.join(
+      process.cwd(),
+      "dist/src/modules/casino/data/pgsoft-games.json",
+    ),
+  ];
+  for (const file of candidates) {
+    if (fs.existsSync(file)) {
+      return JSON.parse(fs.readFileSync(file, "utf8")) as PgSoftCatalogEntry[];
+    }
+  }
+  throw new Error("pgsoft-games.json não encontrado");
+}
 
 @Injectable()
 export class CasinoService {
@@ -67,7 +90,7 @@ export class CasinoService {
     const games = await this.prisma.casinoGame.findMany({
       where,
       orderBy: [{ isNew: "desc" }, { createdAt: "desc" }],
-      take: 200,
+      take: 500,
     });
 
     await this.cache.setJson(cacheKey, games, 60);
@@ -104,8 +127,16 @@ export class CasinoService {
   }
 
   async syncPgSoftCatalog() {
+    const catalog = loadPgSoftCatalog();
+    const activeIds = new Set(catalog.map((g) => g.providerGameId));
     let upserted = 0;
-    for (const g of PGSOFT_CATALOG) {
+
+    for (const g of catalog) {
+      const features = {
+        maxWin: g.maxWin ?? null,
+        catalogGid: g.catalogGid ?? null,
+        code: g.code ?? null,
+      };
       await this.prisma.casinoGame.upsert({
         where: {
           provider_providerGameId: {
@@ -115,10 +146,13 @@ export class CasinoService {
         },
         update: {
           name: g.name,
-          category: g.category,
+          category: g.category || "slots",
           slug: g.slug,
           rtp: g.rtp,
           thumbnail: g.thumbnail,
+          description: g.description ?? null,
+          isNew: Boolean(g.isNew),
+          features,
           isActive: true,
           demoAvailable: true,
         },
@@ -126,27 +160,52 @@ export class CasinoService {
           provider: "PGSOFT",
           providerGameId: g.providerGameId,
           name: g.name,
-          category: g.category,
+          category: g.category || "slots",
           slug: g.slug,
           rtp: g.rtp,
           thumbnail: g.thumbnail,
+          description: g.description ?? null,
+          features,
           minBet: 0.2,
           maxBet: 1000,
           isActive: true,
           demoAvailable: true,
-          isNew: true,
+          isNew: Boolean(g.isNew),
         },
       });
       upserted += 1;
     }
+
+    const orphans = await this.prisma.casinoGame.findMany({
+      where: { provider: "PGSOFT" },
+      select: { id: true, providerGameId: true },
+    });
+    const orphanIds = orphans
+      .filter((g) => !activeIds.has(g.providerGameId))
+      .map((g) => g.id);
+    let deactivated = 0;
+    if (orphanIds.length) {
+      const result = await this.prisma.casinoGame.updateMany({
+        where: { id: { in: orphanIds } },
+        data: { isActive: false },
+      });
+      deactivated = result.count;
+    }
+
     try {
       await this.cache.del("casino:games:all:all");
       await this.cache.del("casino:games:slots:all");
       await this.cache.del("casino:games:all:PGSOFT");
+      await this.cache.del("casino:games:slots:PGSOFT");
     } catch {
       /* ignore */
     }
-    return { upserted, provider: "PGSOFT" };
+    return {
+      upserted,
+      deactivated,
+      total: catalog.length,
+      provider: "PGSOFT",
+    };
   }
 
   async launchGame(

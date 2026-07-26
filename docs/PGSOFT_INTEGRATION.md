@@ -37,8 +37,10 @@ Resposta no formato PG Soft: `{ data: {...}, error: null | { code, message } }`.
 
 ## Catálogo
 
-- Seed: 10 jogos PG Soft (Fortune Tiger, Mahjong Ways, etc.)
-- Admin: `POST /api/casino/pgsoft/sync` (role ADMIN) re-upserta o catálogo
+- Fonte: `backend/src/modules/casino/data/pgsoft-games.json` (**149 jogos**, IDs de launch = `pgid` oficial)
+- Seed e `POST /api/casino/pgsoft/sync` (ADMIN) fazem upsert do catálogo completo
+- Thumbs: CDN pública PG Soft (`public.pg-demo.com` / assets oficiais)
+- Atualizar catálogo: refetch `https://api.pgsoft.com/Game/GetDefaultAllGame/language/pt-BR` → regenerar o JSON
 
 ## Frontend
 
@@ -52,5 +54,5 @@ Resposta no formato PG Soft: `{ data: {...}, error: null | { code, message } }`.
 2. Preencher env no Compose / `.env`
 3. Apontar wallet callbacks para a API pública
 4. Testar VerifySession → Get → TransferInOut com 1 jogo
-5. Trocar thumbs placeholder (`/games/pgsoft/...`) por CDN licenciada
+5. `POST /api/casino/pgsoft/sync` (ou seed) para garantir os 149 jogos
 6. Rebuild: `docker compose up -d --build backend frontend`
